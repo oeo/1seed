@@ -13,6 +13,9 @@ impl TestContext {
         let seed_file = _dir.path().join("seed");
         std::fs::write(&seed_file, b"test seed phrase for integration tests").unwrap();
 
+        // canonicalize to resolve any symlinks (important on macOS where /tmp -> /private/tmp)
+        let seed_file = seed_file.canonicalize().unwrap();
+
         eprintln!(
             "Created seed file: {} (exists: {})",
             seed_file.display(),
