@@ -98,8 +98,7 @@ pub fn decrypt(
     // handle armored input by de-armoring first
     if ciphertext.starts_with(b"-----BEGIN AGE ENCRYPTED FILE-----") {
         let armored_reader = age::armor::ArmoredReader::new(&ciphertext[..]);
-        ciphertext = std::io::Read::bytes(armored_reader)
-            .collect::<Result<Vec<u8>, _>>()?;
+        ciphertext = std::io::Read::bytes(armored_reader).collect::<Result<Vec<u8>, _>>()?;
     }
 
     let decryptor = match age::Decryptor::new(&ciphertext[..])? {
@@ -128,8 +127,7 @@ pub fn decrypt_with_file(
     // handle armored input by de-armoring first
     if ciphertext.starts_with(b"-----BEGIN AGE ENCRYPTED FILE-----") {
         let armored_reader = age::armor::ArmoredReader::new(&ciphertext[..]);
-        ciphertext = std::io::Read::bytes(armored_reader)
-            .collect::<Result<Vec<u8>, _>>()?;
+        ciphertext = std::io::Read::bytes(armored_reader).collect::<Result<Vec<u8>, _>>()?;
     }
 
     let decryptor = match age::Decryptor::new(&ciphertext[..])? {
@@ -155,8 +153,7 @@ pub fn decrypt_passphrase(
     // handle armored input by de-armoring first
     if ciphertext.starts_with(b"-----BEGIN AGE ENCRYPTED FILE-----") {
         let armored_reader = age::armor::ArmoredReader::new(&ciphertext[..]);
-        ciphertext = std::io::Read::bytes(armored_reader)
-            .collect::<Result<Vec<u8>, _>>()?;
+        ciphertext = std::io::Read::bytes(armored_reader).collect::<Result<Vec<u8>, _>>()?;
     }
 
     let decryptor = match age::Decryptor::new(&ciphertext[..])? {

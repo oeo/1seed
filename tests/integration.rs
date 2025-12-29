@@ -23,7 +23,6 @@ impl TestContext {
     }
 }
 
-
 #[test]
 fn pub_deterministic() {
     let ctx = TestContext::new();
@@ -66,7 +65,8 @@ fn encrypt_decrypt_roundtrip() {
     let plaintext = b"hello world";
 
     // encrypt
-    let mut enc = ctx.cmd()
+    let mut enc = ctx
+        .cmd()
         .args(["enc", "-a"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -81,7 +81,8 @@ fn encrypt_decrypt_roundtrip() {
     assert!(String::from_utf8_lossy(&ciphertext).contains("-----BEGIN AGE ENCRYPTED FILE-----"));
 
     // decrypt
-    let mut dec = ctx.cmd()
+    let mut dec = ctx
+        .cmd()
         .arg("dec")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -127,10 +128,7 @@ fn password_counter_changes_output() {
 fn password_length() {
     let ctx = TestContext::new();
 
-    let out = ctx.cmd()
-        .args(["pw", "site", "-l", "32"])
-        .output()
-        .unwrap();
+    let out = ctx.cmd().args(["pw", "site", "-l", "32"]).output().unwrap();
     assert!(out.status.success());
     assert_eq!(out.stdout.len(), 32);
 }
@@ -141,7 +139,8 @@ fn sign_verify_roundtrip() {
     let data = b"data to sign";
 
     // sign
-    let mut sign = ctx.cmd()
+    let mut sign = ctx
+        .cmd()
         .arg("sign")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -158,7 +157,8 @@ fn sign_verify_roundtrip() {
         .to_string();
 
     // verify
-    let mut verify = ctx.cmd()
+    let mut verify = ctx
+        .cmd()
         .args(["verify", &sig])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -176,7 +176,8 @@ fn verify_fails_wrong_data() {
     let ctx = TestContext::new();
 
     // sign
-    let mut sign = ctx.cmd()
+    let mut sign = ctx
+        .cmd()
         .arg("sign")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -191,7 +192,8 @@ fn verify_fails_wrong_data() {
         .to_string();
 
     // verify with different data
-    let mut verify = ctx.cmd()
+    let mut verify = ctx
+        .cmd()
         .args(["verify", &sig])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -213,7 +215,8 @@ fn verify_fails_wrong_data() {
 fn raw_hex_output() {
     let ctx = TestContext::new();
 
-    let out = ctx.cmd()
+    let out = ctx
+        .cmd()
         .args(["raw", "test", "-l", "16"])
         .output()
         .unwrap();
@@ -228,7 +231,8 @@ fn raw_hex_output() {
 fn raw_base64_output() {
     let ctx = TestContext::new();
 
-    let out = ctx.cmd()
+    let out = ctx
+        .cmd()
         .args(["raw", "test", "-l", "32", "--base64"])
         .output()
         .unwrap();
@@ -243,7 +247,8 @@ fn mnemonic_word_counts() {
     let ctx = TestContext::new();
 
     for words in [12, 15, 18, 21, 24] {
-        let out = ctx.cmd()
+        let out = ctx
+            .cmd()
             .args(["mnemonic", "-w", &words.to_string()])
             .output()
             .unwrap();
@@ -254,7 +259,11 @@ fn mnemonic_word_counts() {
             eprintln!("Stdout: {}", String::from_utf8_lossy(&out.stdout));
             eprintln!("Exit code: {}", out.status);
         }
-        assert!(out.status.success(), "mnemonic command failed for {} words", words);
+        assert!(
+            out.status.success(),
+            "mnemonic command failed for {} words",
+            words
+        );
 
         let mnemonic = String::from_utf8_lossy(&out.stdout);
         let count = mnemonic.trim().split_whitespace().count();
@@ -269,14 +278,16 @@ fn config_set_get() {
     let config_dir = dir.path().join("config");
     std::fs::create_dir_all(&config_dir).unwrap();
 
-    let out = ctx.cmd()
+    let out = ctx
+        .cmd()
         .env("XDG_CONFIG_HOME", &config_dir)
         .args(["config", "set", "realm", "test-realm"])
         .output()
         .unwrap();
     assert!(out.status.success());
 
-    let out = ctx.cmd()
+    let out = ctx
+        .cmd()
         .env("XDG_CONFIG_HOME", &config_dir)
         .args(["config", "get", "realm"])
         .output()
@@ -305,7 +316,8 @@ fn realms_add_list_rm() {
         .unwrap();
 
     // list
-    let out = ctx.cmd()
+    let out = ctx
+        .cmd()
         .env("XDG_CONFIG_HOME", &config_dir)
         .arg("realms")
         .output()
@@ -321,7 +333,8 @@ fn realms_add_list_rm() {
         .output()
         .unwrap();
 
-    let out = ctx.cmd()
+    let out = ctx
+        .cmd()
         .env("XDG_CONFIG_HOME", &config_dir)
         .arg("realms")
         .output()
