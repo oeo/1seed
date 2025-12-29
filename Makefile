@@ -57,5 +57,8 @@ release:
 	git tag -a v$(VERSION) -m "Release v$(VERSION)"
 	git push origin master
 	git push origin v$(VERSION)
+	@echo ""
 	@echo "Release v$(VERSION) created and pushed!"
 	@echo "GitHub Actions will build binaries at: https://github.com/oeo/1seed/actions"
+	@echo ""
+	@echo "To publish to crates.io, run: cargo publish"
