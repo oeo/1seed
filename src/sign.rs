@@ -12,7 +12,11 @@ pub fn derive_public(seed: &Seed, realm: &str) -> String {
     base64::engine::general_purpose::STANDARD.encode(verifying_key.as_bytes())
 }
 
-pub fn sign(seed: &Seed, realm: &str, input: Option<&Path>) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+pub fn sign(
+    seed: &Seed,
+    realm: &str,
+    input: Option<&Path>,
+) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     let raw = seed.derive_32(realm, "sign");
     let signing_key = SigningKey::from_bytes(&raw);
 

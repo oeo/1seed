@@ -1,5 +1,5 @@
-use std::process::{Command, Stdio};
 use std::io::Write;
+use std::process::{Command, Stdio};
 use tempfile::TempDir;
 
 fn seed_cmd() -> Command {
@@ -113,7 +113,10 @@ fn password_counter_changes_output() {
 fn password_length() {
     let _dir = setup_seed();
 
-    let out = seed_cmd().args(["pw", "site", "-l", "32"]).output().unwrap();
+    let out = seed_cmd()
+        .args(["pw", "site", "-l", "32"])
+        .output()
+        .unwrap();
     assert!(out.status.success());
     assert_eq!(out.stdout.len(), 32);
 }
@@ -135,7 +138,10 @@ fn sign_verify_roundtrip() {
     let sign_out = sign.wait_with_output().unwrap();
     assert!(sign_out.status.success());
 
-    let sig = String::from_utf8(sign_out.stdout).unwrap().trim().to_string();
+    let sig = String::from_utf8(sign_out.stdout)
+        .unwrap()
+        .trim()
+        .to_string();
 
     // verify
     let mut verify = seed_cmd()
@@ -165,7 +171,10 @@ fn verify_fails_wrong_data() {
 
     sign.stdin.as_mut().unwrap().write_all(b"original").unwrap();
     let sign_out = sign.wait_with_output().unwrap();
-    let sig = String::from_utf8(sign_out.stdout).unwrap().trim().to_string();
+    let sig = String::from_utf8(sign_out.stdout)
+        .unwrap()
+        .trim()
+        .to_string();
 
     // verify with different data
     let mut verify = seed_cmd()
@@ -176,7 +185,12 @@ fn verify_fails_wrong_data() {
         .spawn()
         .unwrap();
 
-    verify.stdin.as_mut().unwrap().write_all(b"tampered").unwrap();
+    verify
+        .stdin
+        .as_mut()
+        .unwrap()
+        .write_all(b"tampered")
+        .unwrap();
     let verify_out = verify.wait_with_output().unwrap();
     assert!(!verify_out.status.success());
 }
@@ -185,7 +199,10 @@ fn verify_fails_wrong_data() {
 fn raw_hex_output() {
     let _dir = setup_seed();
 
-    let out = seed_cmd().args(["raw", "test", "-l", "16"]).output().unwrap();
+    let out = seed_cmd()
+        .args(["raw", "test", "-l", "16"])
+        .output()
+        .unwrap();
     assert!(out.status.success());
 
     let hex = String::from_utf8_lossy(&out.stdout).trim().to_string();
@@ -197,7 +214,10 @@ fn raw_hex_output() {
 fn raw_base64_output() {
     let _dir = setup_seed();
 
-    let out = seed_cmd().args(["raw", "test", "-l", "32", "--base64"]).output().unwrap();
+    let out = seed_cmd()
+        .args(["raw", "test", "-l", "32", "--base64"])
+        .output()
+        .unwrap();
     assert!(out.status.success());
 
     let b64 = String::from_utf8_lossy(&out.stdout).trim().to_string();
@@ -253,7 +273,10 @@ fn realms_add_list_rm() {
     std::env::set_var("XDG_CONFIG_HOME", &config_dir);
 
     // add
-    seed_cmd().args(["realms", "add", "personal"]).output().unwrap();
+    seed_cmd()
+        .args(["realms", "add", "personal"])
+        .output()
+        .unwrap();
     seed_cmd().args(["realms", "add", "work"]).output().unwrap();
 
     // list

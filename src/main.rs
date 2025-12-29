@@ -1,11 +1,11 @@
+mod age;
 mod cli;
 mod config;
-mod seed;
-mod age;
-mod ssh;
-mod sign;
-mod password;
 mod derive;
+mod password;
+mod seed;
+mod sign;
+mod ssh;
 
 use std::process::ExitCode;
 

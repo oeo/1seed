@@ -92,8 +92,14 @@ mod tests {
         for i in 0..100 {
             let pw = derive(&seed, "realm", &format!("site{i}"), 1, 16, true, "").unwrap();
 
-            assert!(pw.chars().any(|c| c.is_ascii_uppercase()), "missing uppercase");
-            assert!(pw.chars().any(|c| c.is_ascii_lowercase()), "missing lowercase");
+            assert!(
+                pw.chars().any(|c| c.is_ascii_uppercase()),
+                "missing uppercase"
+            );
+            assert!(
+                pw.chars().any(|c| c.is_ascii_lowercase()),
+                "missing lowercase"
+            );
             assert!(pw.chars().any(|c| c.is_ascii_digit()), "missing digit");
             assert!(pw.chars().any(|c| "!@#$%^&*".contains(c)), "missing symbol");
         }

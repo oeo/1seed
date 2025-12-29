@@ -24,7 +24,7 @@ impl Seed {
     pub fn from_file(path: &Path) -> Result<Self, Box<dyn std::error::Error>> {
         let bytes = std::fs::read(path)?;
 
-        if bytes.len() >= 32 && bytes.iter().any(|&b| b > 127 || b < 32) {
+        if bytes.len() >= 32 && bytes.iter().any(|&b| !(32..=127).contains(&b)) {
             // looks like binary data, use first 32 bytes
             let mut master = Zeroizing::new([0u8; 32]);
             master.copy_from_slice(&bytes[..32]);

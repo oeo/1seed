@@ -8,7 +8,11 @@ use crate::{age, derive, password, sign, ssh};
 
 #[derive(Parser)]
 #[command(name = "1seed")]
-#[command(author, version, about = "Deterministic cryptographic keys from a single seed")]
+#[command(
+    author,
+    version,
+    about = "Deterministic cryptographic keys from a single seed"
+)]
 #[command(after_help = "EXAMPLES:
     1seed pub                        Show age public key
     1seed -r work ssh-add            Add work SSH key to agent
@@ -273,12 +277,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         } => {
             if passphrase {
                 let pass = prompt_passphrase("passphrase")?;
-                age::encrypt_passphrase(
-                    &pass,
-                    armor,
-                    file.as_deref(),
-                    output.as_deref(),
-                )?;
+                age::encrypt_passphrase(&pass, armor, file.as_deref(), output.as_deref())?;
             } else {
                 let seed = get_seed(&cli)?;
                 let use_self = self_ || (recipients.is_empty() && recipient_files.is_empty());
@@ -298,12 +297,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                     all_recipients.extend(age::parse_recipients_file(f)?);
                 }
 
-                age::encrypt(
-                    all_recipients,
-                    armor,
-                    file.as_deref(),
-                    output.as_deref(),
-                )?;
+                age::encrypt(all_recipients, armor, file.as_deref(), output.as_deref())?;
             }
         }
 
@@ -317,7 +311,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 let pass = prompt_passphrase("passphrase")?;
                 age::decrypt_passphrase(&pass, file.as_deref(), output.as_deref())?;
             } else if let Some(key_file) = key {
-                age::decrypt_with_file(&key_file, file.as_deref(), output.as_deref())?;
+                age::decrypt_with_file(key_file, file.as_deref(), output.as_deref())?;
             } else {
                 let seed = get_seed(&cli)?;
                 let identity = age::derive_identity(&seed, &realm);
@@ -360,7 +354,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 std::fs::read(path)?
             } else {
                 use base64::Engine;
-                base64::engine::general_purpose::STANDARD.decode(&signature)?
+                base64::engine::general_purpose::STANDARD.decode(signature)?
             };
 
             let pubkey_str = if let Some(pk) = pubkey.as_ref() {
@@ -389,15 +383,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             counter,
         } => {
             let seed = get_seed(&cli)?;
-            let pw = password::derive(
-                &seed,
-                &realm,
-                &site,
-                counter,
-                length,
-                !no_symbols,
-                &symbols,
-            )?;
+            let pw = password::derive(&seed, &realm, site, counter, length, !no_symbols, symbols)?;
             print!("{}", pw.as_str());
         }
 
@@ -409,7 +395,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             binary,
         } => {
             let seed = get_seed(&cli)?;
-            let bytes = derive::raw(&seed, &realm, &path, length);
+            let bytes = derive::raw(&seed, &realm, path, length);
 
             if binary {
                 std::io::stdout().write_all(&bytes)?;
@@ -519,7 +505,12 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
 
             println!("realm:  {realm}");
 
-            if config.seed_file.as_ref().map(|f| f.exists()).unwrap_or(true) {
+            if config
+                .seed_file
+                .as_ref()
+                .map(|f| f.exists())
+                .unwrap_or(true)
+            {
                 if let Ok(seed) = get_seed(&cli) {
                     println!();
                     println!("keys:");

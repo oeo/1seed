@@ -9,7 +9,8 @@ pub fn derive_recipient(seed: &Seed, realm: &str) -> String {
     // encode using age's bech32 format for recipients
     use bech32::{ToBase32, Variant};
     let public = x25519_dalek::PublicKey::from(&secret);
-    let encoded = bech32::encode("age", public.as_bytes().to_base32(), Variant::Bech32).expect("valid bech32");
+    let encoded = bech32::encode("age", public.as_bytes().to_base32(), Variant::Bech32)
+        .expect("valid bech32");
     encoded
 }
 
@@ -19,7 +20,12 @@ pub fn derive_identity(seed: &Seed, realm: &str) -> String {
 
     // encode using age's bech32 format for identities
     use bech32::{ToBase32, Variant};
-    let encoded = bech32::encode("age-secret-key-", secret.to_bytes().to_base32(), Variant::Bech32).expect("valid bech32");
+    let encoded = bech32::encode(
+        "age-secret-key-",
+        secret.to_bytes().to_base32(),
+        Variant::Bech32,
+    )
+    .expect("valid bech32");
     encoded.to_uppercase()
 }
 
@@ -35,15 +41,16 @@ pub fn encrypt(
 
     let plaintext = read_input(input)?;
 
-    let encryptor = age::Encryptor::with_recipients(recipients)
-        .ok_or("failed to create encryptor")?;
+    let encryptor =
+        age::Encryptor::with_recipients(recipients).ok_or("failed to create encryptor")?;
 
     let mut ciphertext = vec![];
 
     if armor {
-        let mut writer = encryptor.wrap_output(
-            age::armor::ArmoredWriter::wrap_output(&mut ciphertext, age::armor::Format::AsciiArmor)?
-        )?;
+        let mut writer = encryptor.wrap_output(age::armor::ArmoredWriter::wrap_output(
+            &mut ciphertext,
+            age::armor::Format::AsciiArmor,
+        )?)?;
         writer.write_all(&plaintext)?;
         writer.finish().and_then(|w| w.finish())?;
     } else {
@@ -69,9 +76,10 @@ pub fn encrypt_passphrase(
     let mut ciphertext = vec![];
 
     if armor {
-        let mut writer = encryptor.wrap_output(
-            age::armor::ArmoredWriter::wrap_output(&mut ciphertext, age::armor::Format::AsciiArmor)?
-        )?;
+        let mut writer = encryptor.wrap_output(age::armor::ArmoredWriter::wrap_output(
+            &mut ciphertext,
+            age::armor::Format::AsciiArmor,
+        )?)?;
         writer.write_all(&plaintext)?;
         writer.finish().and_then(|w| w.finish())?;
     } else {
@@ -95,9 +103,7 @@ pub fn decrypt(
 
     let decryptor = match age::Decryptor::new(&ciphertext[..])? {
         age::Decryptor::Recipients(d) => d,
-        age::Decryptor::Passphrase(_) => {
-            return Err("encrypted with passphrase, use -p".into())
-        }
+        age::Decryptor::Passphrase(_) => return Err("encrypted with passphrase, use -p".into()),
     };
 
     let mut plaintext = vec![];
@@ -120,9 +126,7 @@ pub fn decrypt_with_file(
 
     let decryptor = match age::Decryptor::new(&ciphertext[..])? {
         age::Decryptor::Recipients(d) => d,
-        age::Decryptor::Passphrase(_) => {
-            return Err("encrypted with passphrase, use -p".into())
-        }
+        age::Decryptor::Passphrase(_) => return Err("encrypted with passphrase, use -p".into()),
     };
 
     let mut plaintext = vec![];
@@ -141,9 +145,7 @@ pub fn decrypt_passphrase(
     let ciphertext = read_input(input)?;
 
     let decryptor = match age::Decryptor::new(&ciphertext[..])? {
-        age::Decryptor::Recipients(_) => {
-            return Err("not encrypted with passphrase".into())
-        }
+        age::Decryptor::Recipients(_) => return Err("not encrypted with passphrase".into()),
         age::Decryptor::Passphrase(d) => d,
     };
 
@@ -155,12 +157,16 @@ pub fn decrypt_passphrase(
     Ok(())
 }
 
-pub fn parse_recipient(s: &str) -> Result<Box<dyn ::age::Recipient + Send>, Box<dyn std::error::Error>> {
+pub fn parse_recipient(
+    s: &str,
+) -> Result<Box<dyn ::age::Recipient + Send>, Box<dyn std::error::Error>> {
     let recipient: age::x25519::Recipient = s.parse()?;
     Ok(Box::new(recipient))
 }
 
-pub fn parse_recipients_file(path: &Path) -> Result<Vec<Box<dyn ::age::Recipient + Send>>, Box<dyn std::error::Error>> {
+pub fn parse_recipients_file(
+    path: &Path,
+) -> Result<Vec<Box<dyn ::age::Recipient + Send>>, Box<dyn std::error::Error>> {
     let content = std::fs::read_to_string(path)?;
     let mut recipients: Vec<Box<dyn ::age::Recipient + Send>> = vec![];
 
