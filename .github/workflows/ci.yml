@@ -14,7 +14,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         rust: [stable, beta]
 
     steps:
@@ -62,12 +62,23 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             asset: 1seed-linux-amd64
+            extension: ''
+            archive: tar.gz
           - os: macos-latest
             target: x86_64-apple-darwin
             asset: 1seed-darwin-amd64
+            extension: ''
+            archive: tar.gz
           - os: macos-latest
             target: aarch64-apple-darwin
             asset: 1seed-darwin-arm64
+            extension: ''
+            archive: tar.gz
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            asset: 1seed-windows-amd64
+            extension: .exe
+            archive: zip
 
     steps:
       - uses: actions/checkout@v4
@@ -80,13 +91,20 @@ jobs:
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Package
+      - name: Package (Unix)
+        if: matrix.archive == 'tar.gz'
         run: |
-          cp target/${{ matrix.target }}/release/1seed ${{ matrix.asset }}
-          chmod +x ${{ matrix.asset }}
-          tar czf ${{ matrix.asset }}.tar.gz ${{ matrix.asset }}
+          cp target/${{ matrix.target }}/release/1seed${{ matrix.extension }} ${{ matrix.asset }}${{ matrix.extension }}
+          chmod +x ${{ matrix.asset }}${{ matrix.extension }}
+          tar czf ${{ matrix.asset }}.tar.gz ${{ matrix.asset }}${{ matrix.extension }}
+
+      - name: Package (Windows)
+        if: matrix.archive == 'zip'
+        run: |
+          Copy-Item target/${{ matrix.target }}/release/1seed${{ matrix.extension }} ${{ matrix.asset }}${{ matrix.extension }}
+          Compress-Archive -Path ${{ matrix.asset }}${{ matrix.extension }} -DestinationPath ${{ matrix.asset }}.zip
 
       - name: Upload
         uses: softprops/action-gh-release@v1
         with:
-          files: ${{ matrix.asset }}.tar.gz
+          files: ${{ matrix.asset }}.${{ matrix.archive }}

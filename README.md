@@ -1,5 +1,9 @@
 # 1seed
 
+[![Rust](https://img.shields.io/badge/rust-%23000000.svg?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CI](https://github.com/oeo/1seed/workflows/CI/badge.svg)](https://github.com/oeo/1seed/actions)
+
 Deterministic cryptographic keys from a single seed.
 
 ## What This Does
