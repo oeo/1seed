@@ -80,6 +80,12 @@ fn encrypt_decrypt_roundtrip() {
     let ctx = TestContext::new();
     let plaintext = b"hello world";
 
+    // verify seed file contents
+    let seed_bytes = std::fs::read(&ctx.seed_file).unwrap();
+    eprintln!("seed_file: {}", ctx.seed_file.display());
+    eprintln!("seed_bytes length: {}", seed_bytes.len());
+    eprintln!("seed_bytes: {:?}", String::from_utf8_lossy(&seed_bytes));
+
     // get public key for diagnostics
     let pub_out = ctx.cmd().arg("pub").output().unwrap();
     assert!(pub_out.status.success());
