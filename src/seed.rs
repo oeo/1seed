@@ -54,7 +54,10 @@ impl Seed {
     pub fn derive(&self, realm: &str, key_type: &str, length: usize) -> Zeroizing<Vec<u8>> {
         let path = format!("{VERSION}/{realm}/{key_type}");
         eprintln!("DEBUG: HKDF path: {}", path);
-        eprintln!("DEBUG: Master key for HKDF first 8: {:?}", &self.master[..8]);
+        eprintln!(
+            "DEBUG: Master key for HKDF first 8: {:?}",
+            &self.master[..8]
+        );
         let hk = Hkdf::<Sha256>::new(None, self.master.as_ref());
         let mut output = Zeroizing::new(vec![0u8; length]);
         hk.expand(path.as_bytes(), output.as_mut_slice())
