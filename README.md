@@ -2,7 +2,6 @@
 
 [![Rust](https://img.shields.io/badge/rust-%23E34F26.svg?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
-[![CI](https://github.com/oeo/1seed/workflows/CI/badge.svg?style=for-the-badge)](https://github.com/oeo/1seed/actions)
 [![Crates.io](https://img.shields.io/crates/v/oneseed.svg?style=for-the-badge)](https://crates.io/crates/oneseed)
 
 Deterministic cryptographic keys from a single seed.
