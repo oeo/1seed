@@ -114,7 +114,11 @@ fn encrypt_decrypt_roundtrip() {
     eprintln!("Public key (2nd call): {}", public_key2.trim());
 
     if public_key != public_key2 {
-        panic!("PUBLIC KEY CHANGED! First: {}, Second: {}", public_key.trim(), public_key2.trim());
+        panic!(
+            "PUBLIC KEY CHANGED! First: {}, Second: {}",
+            public_key.trim(),
+            public_key2.trim()
+        );
     }
 
     // decrypt
