@@ -28,7 +28,8 @@ impl TestContext {
     fn cmd(&self) -> Command {
         let mut cmd = Command::new(env!("CARGO_BIN_EXE_1seed"));
         cmd.env("ONESEED_TEST_MODE", "1");
-        cmd.env("SEED_FILE", &self.seed_file);
+        cmd.arg("-f");
+        cmd.arg(&self.seed_file);
         cmd
     }
 }
