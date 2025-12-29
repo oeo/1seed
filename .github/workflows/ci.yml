@@ -51,9 +51,13 @@ jobs:
 
       - name: Test
         run: cargo test
+        env:
+          ONESEED_TEST_MODE: "1"
 
       - name: Integration tests
         run: cargo test --test integration
+        env:
+          ONESEED_TEST_MODE: "1"
 
   release:
     needs: test
