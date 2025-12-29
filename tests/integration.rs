@@ -12,6 +12,13 @@ impl TestContext {
         let _dir = TempDir::new().unwrap();
         let seed_file = _dir.path().join("seed");
         std::fs::write(&seed_file, b"test seed phrase for integration tests").unwrap();
+
+        eprintln!(
+            "Created seed file: {} (exists: {})",
+            seed_file.display(),
+            seed_file.exists()
+        );
+
         TestContext { _dir, seed_file }
     }
 
@@ -63,6 +70,18 @@ fn ssh_pub_format() {
 fn encrypt_decrypt_roundtrip() {
     let ctx = TestContext::new();
     let plaintext = b"hello world";
+
+    // verify determinism
+    let pub1 = ctx.cmd().arg("pub").output().unwrap();
+    let pub2 = ctx.cmd().arg("pub").output().unwrap();
+    assert_eq!(
+        pub1.stdout, pub2.stdout,
+        "Public keys should be deterministic"
+    );
+    eprintln!(
+        "Recipient: {}",
+        String::from_utf8_lossy(&pub1.stdout).trim()
+    );
 
     // encrypt
     let mut enc = ctx
