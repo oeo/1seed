@@ -64,18 +64,6 @@ fn encrypt_decrypt_roundtrip() {
     let ctx = TestContext::new();
     let plaintext = b"hello world";
 
-    // verify the public key and identity match
-    let pub_out = ctx.cmd().arg("pub").output().unwrap();
-    let priv_out = ctx.cmd().arg("priv").output().unwrap();
-    eprintln!(
-        "Public key: {}",
-        String::from_utf8_lossy(&pub_out.stdout).trim()
-    );
-    eprintln!(
-        "Identity: {}",
-        String::from_utf8_lossy(&priv_out.stdout).trim()
-    );
-
     // encrypt
     let mut enc = ctx
         .cmd()
@@ -104,9 +92,6 @@ fn encrypt_decrypt_roundtrip() {
 
     dec.stdin.as_mut().unwrap().write_all(&ciphertext).unwrap();
     let dec_out = dec.wait_with_output().unwrap();
-    if !dec_out.status.success() {
-        eprintln!("Dec stderr: {}", String::from_utf8_lossy(&dec_out.stderr));
-    }
     assert!(dec_out.status.success());
 
     assert_eq!(dec_out.stdout, plaintext);
@@ -265,17 +250,7 @@ fn mnemonic_word_counts() {
             .output()
             .unwrap();
 
-        if !out.status.success() {
-            eprintln!("Mnemonic failed for {} words", words);
-            eprintln!("Stderr: {}", String::from_utf8_lossy(&out.stderr));
-            eprintln!("Stdout: {}", String::from_utf8_lossy(&out.stdout));
-            eprintln!("Exit code: {}", out.status);
-        }
-        assert!(
-            out.status.success(),
-            "mnemonic command failed for {} words",
-            words
-        );
+        assert!(out.status.success());
 
         let mnemonic = String::from_utf8_lossy(&out.stdout);
         let count = mnemonic.trim().split_whitespace().count();
