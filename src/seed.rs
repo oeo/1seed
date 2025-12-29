@@ -17,28 +17,36 @@ impl Seed {
         // production: N=20 (~1GB RAM, ~1 sec)
         // testing: N=12 (~4MB RAM, ~10ms) via ONESEED_TEST_MODE=1
         let scrypt_n = if std::env::var("ONESEED_TEST_MODE").is_ok() {
+            eprintln!("DEBUG: Using test mode scrypt N=12");
             12
         } else {
+            eprintln!("DEBUG: Using production scrypt N=20");
             20
         };
         let params = Params::new(scrypt_n, SCRYPT_R, SCRYPT_P, 32)?;
         let mut master = Zeroizing::new([0u8; 32]);
         scrypt(passphrase.as_bytes(), b"1seed", &params, master.as_mut())?;
+        eprintln!("DEBUG: Scrypt master key first 8 bytes: {:?}", &master[..8]);
         Ok(Self { master })
     }
 
     pub fn from_file(path: &Path) -> Result<Self, Box<dyn std::error::Error>> {
         let bytes = std::fs::read(path)?;
 
+        eprintln!("DEBUG: Read {} bytes from seed file", bytes.len());
+        eprintln!("DEBUG: First 20 bytes: {:?}", &bytes[..20.min(bytes.len())]);
+
         if bytes.len() >= 32 && bytes.iter().any(|&b| !(32..=127).contains(&b)) {
             // looks like binary data, use first 32 bytes
             let mut master = Zeroizing::new([0u8; 32]);
             master.copy_from_slice(&bytes[..32]);
+            eprintln!("DEBUG: Using binary seed");
             Ok(Self { master })
         } else {
             // treat as passphrase
             let passphrase = String::from_utf8_lossy(&bytes);
             let passphrase = passphrase.trim();
+            eprintln!("DEBUG: Using passphrase: {}", passphrase);
             Self::from_passphrase(passphrase)
         }
     }
