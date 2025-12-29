@@ -68,12 +68,6 @@ pub enum Commands {
 
     /// Get configuration value
     Get { key: String },
-
-    /// Manage known realms
-    Realms {
-        #[command(subcommand)]
-        action: Option<RealmsAction>,
-    },
 }
 
 #[derive(Subcommand)]
@@ -209,14 +203,6 @@ pub enum DeriveAction {
         #[arg(long)]
         binary: bool,
     },
-}
-
-#[derive(Subcommand)]
-pub enum RealmsAction {
-    /// Add realm to list
-    Add { name: String },
-    /// Remove realm from list
-    Rm { name: String },
 }
 
 impl Cli {
@@ -492,25 +478,6 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 _ => return Err(format!("unknown key: {key}").into()),
             }
         }
-
-        Commands::Realms { action } => match action {
-            None => {
-                let config = Config::load()?;
-                for r in &config.realms {
-                    println!("{r}");
-                }
-            }
-            Some(RealmsAction::Add { name }) => {
-                let mut config = Config::load().unwrap_or_default();
-                config.add_realm(&name);
-                config.save()?;
-            }
-            Some(RealmsAction::Rm { name }) => {
-                let mut config = Config::load().unwrap_or_default();
-                config.remove_realm(&name);
-                config.save()?;
-            }
-        },
 
         Commands::Info => {
             let config = Config::load().unwrap_or_default();

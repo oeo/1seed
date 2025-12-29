@@ -8,9 +8,6 @@ pub struct Config {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub seed_file: Option<PathBuf>,
-
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub realms: Vec<String>,
 }
 
 impl Config {
@@ -42,16 +39,5 @@ impl Config {
         std::fs::write(&path, content)?;
 
         Ok(())
-    }
-
-    pub fn add_realm(&mut self, name: &str) {
-        if !self.realms.contains(&name.to_string()) {
-            self.realms.push(name.to_string());
-            self.realms.sort();
-        }
-    }
-
-    pub fn remove_realm(&mut self, name: &str) {
-        self.realms.retain(|r| r != name);
     }
 }

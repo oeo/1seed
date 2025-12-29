@@ -144,12 +144,9 @@ Default: encrypt to self, decrypt with derived key.
 ### Configuration
 
 ```
-1seed info                Show config and derived keys
-1seed set KEY VALUE       Set config value (realm, seed-file)
-1seed get KEY             Get config value
-1seed realms              List known realms
-1seed realms add NAME     Track realm
-1seed realms rm NAME      Untrack realm
+1seed info          Show config and derived keys
+1seed set KEY VALUE Set config value (realm, seed-file)
+1seed get KEY       Get config value
 ```
 
 ## Realms
@@ -160,11 +157,6 @@ Realms namespace all derived keys. Same seed, different realm = different keys.
 1seed --realm personal age pub     # Personal age key
 1seed --realm work age pub         # Work age key (different)
 1seed --realm work ssh add         # Work SSH key
-
-# Track realms for reference
-1seed realms add personal
-1seed realms add work
-1seed realms
 ```
 
 Set a default:
