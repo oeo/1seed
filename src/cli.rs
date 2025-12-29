@@ -14,17 +14,17 @@ use crate::{age, derive, password, sign, ssh};
     about = "Deterministic cryptographic keys from a single seed"
 )]
 #[command(after_help = "EXAMPLES:
-    1seed pub                        Show age public key
-    1seed -r work ssh-add            Add work SSH key to agent
-    echo secret | 1seed enc          Encrypt to self
-    1seed pw github.com              Derive password
+    1seed age pub                    Show age public key
+    1seed --realm work ssh add       Add work SSH key to agent
+    echo secret | 1seed age encrypt  Encrypt to self
+    1seed derive password github.com Derive password
 
 ENVIRONMENT:
     SEED_FILE    Path to seed file
     SEED_REALM   Default realm (default: \"default\")
 ")]
 pub struct Cli {
-    #[arg(short, long, global = true, env = "SEED_REALM")]
+    #[arg(long, global = true, env = "SEED_REALM")]
     pub realm: Option<String>,
 
     #[arg(short = 'f', long, global = true, env = "SEED_FILE")]
@@ -36,23 +36,56 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    /// Age public key
+    /// Age encryption keys and operations
+    Age {
+        #[command(subcommand)]
+        action: AgeAction,
+    },
+
+    /// SSH keys and operations
+    Ssh {
+        #[command(subcommand)]
+        action: SshAction,
+    },
+
+    /// Ed25519 signing keys and operations
+    Sign {
+        #[command(subcommand)]
+        action: SignAction,
+    },
+
+    /// Derive passwords, mnemonics, and raw bytes
+    Derive {
+        #[command(subcommand)]
+        action: DeriveAction,
+    },
+
+    /// Show configuration and derived keys
+    Info,
+
+    /// Set configuration value
+    Set { key: String, value: String },
+
+    /// Get configuration value
+    Get { key: String },
+
+    /// Manage known realms
+    Realms {
+        #[command(subcommand)]
+        action: Option<RealmsAction>,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum AgeAction {
+    /// Show age public key
     Pub,
 
-    /// Age private key
-    Priv,
+    /// Show age private key
+    Key,
 
-    /// SSH private key (OpenSSH format)
-    Ssh,
-
-    /// SSH public key
-    SshPub,
-
-    /// Ed25519 signing public key
-    SignPub,
-
-    /// Encrypt with age
-    Enc {
+    /// Encrypt file with age
+    Encrypt {
         #[arg(short = 'R', long = "recipient", action = clap::ArgAction::Append)]
         recipients: Vec<String>,
 
@@ -74,8 +107,8 @@ pub enum Commands {
         file: Option<PathBuf>,
     },
 
-    /// Decrypt with age
-    Dec {
+    /// Decrypt file with age
+    Decrypt {
         #[arg(short, long)]
         key: Option<PathBuf>,
 
@@ -87,9 +120,33 @@ pub enum Commands {
 
         file: Option<PathBuf>,
     },
+}
 
-    /// Sign data with Ed25519
-    Sign {
+#[derive(Subcommand)]
+pub enum SshAction {
+    /// Show SSH public key
+    Pub,
+
+    /// Show SSH private key
+    Key,
+
+    /// Add SSH key to agent
+    Add {
+        #[arg(short, long)]
+        lifetime: Option<u32>,
+
+        #[arg(short, long)]
+        confirm: bool,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum SignAction {
+    /// Show signing public key
+    Pub,
+
+    /// Sign data
+    Data {
         #[arg(short, long)]
         output: Option<PathBuf>,
 
@@ -99,7 +156,7 @@ pub enum Commands {
         file: Option<PathBuf>,
     },
 
-    /// Verify Ed25519 signature
+    /// Verify signature
     Verify {
         /// Signature (base64, or @file)
         signature: String,
@@ -109,9 +166,12 @@ pub enum Commands {
 
         file: Option<PathBuf>,
     },
+}
 
-    /// Derive password
-    Pw {
+#[derive(Subcommand)]
+pub enum DeriveAction {
+    /// Derive password for site
+    Password {
         site: String,
 
         #[arg(short, long, default_value = "16")]
@@ -125,6 +185,12 @@ pub enum Commands {
 
         #[arg(short = 'n', long, default_value = "1")]
         counter: u32,
+    },
+
+    /// Derive BIP39 mnemonic
+    Mnemonic {
+        #[arg(short, long, default_value = "24")]
+        words: usize,
     },
 
     /// Derive raw bytes
@@ -143,46 +209,6 @@ pub enum Commands {
         #[arg(long)]
         binary: bool,
     },
-
-    /// Derive BIP39 mnemonic
-    Mnemonic {
-        #[arg(short, long, default_value = "24")]
-        words: usize,
-    },
-
-    /// Add SSH key to agent
-    SshAdd {
-        #[arg(short, long)]
-        lifetime: Option<u32>,
-
-        #[arg(short, long)]
-        confirm: bool,
-    },
-
-    /// Manage configuration
-    Config {
-        #[command(subcommand)]
-        action: Option<ConfigAction>,
-    },
-
-    /// Manage known realms
-    Realms {
-        #[command(subcommand)]
-        action: Option<RealmsAction>,
-    },
-
-    /// Show current status
-    Info,
-}
-
-#[derive(Subcommand)]
-pub enum ConfigAction {
-    /// Set config value
-    Set { key: String, value: String },
-    /// Get config value
-    Get { key: String },
-    /// Show config file path
-    Path,
 }
 
 #[derive(Subcommand)]
@@ -239,236 +265,233 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let realm = cli.get_realm();
 
     match cli.command {
-        // key export
-        Commands::Pub => {
-            let seed = get_seed(&cli)?;
-            println!("{}", age::derive_recipient(&seed, &realm));
-        }
-
-        Commands::Priv => {
-            let seed = get_seed(&cli)?;
-            println!("{}", age::derive_identity(&seed, &realm));
-        }
-
-        Commands::Ssh => {
-            let seed = get_seed(&cli)?;
-            print!("{}", ssh::derive_private(&seed, &realm));
-        }
-
-        Commands::SshPub => {
-            let seed = get_seed(&cli)?;
-            println!("{}", ssh::derive_public(&seed, &realm));
-        }
-
-        Commands::SignPub => {
-            let seed = get_seed(&cli)?;
-            println!("{}", sign::derive_public(&seed, &realm));
-        }
-
-        // encryption
-        Commands::Enc {
-            ref recipients,
-            ref recipient_files,
-            self_,
-            passphrase,
-            armor,
-            ref output,
-            ref file,
-        } => {
-            if passphrase {
-                let pass = prompt_passphrase("passphrase")?;
-                age::encrypt_passphrase(&pass, armor, file.as_deref(), output.as_deref())?;
-            } else {
+        Commands::Age { ref action } => match action {
+            AgeAction::Pub => {
                 let seed = get_seed(&cli)?;
-                let use_self = self_ || (recipients.is_empty() && recipient_files.is_empty());
-
-                let mut all_recipients: Vec<Box<dyn ::age::Recipient + Send>> = vec![];
-
-                if use_self {
-                    let recipient_str = age::derive_recipient(&seed, &realm);
-                    all_recipients.push(age::parse_recipient(&recipient_str)?);
-                }
-
-                for r in recipients {
-                    all_recipients.push(age::parse_recipient(r)?);
-                }
-
-                for f in recipient_files {
-                    all_recipients.extend(age::parse_recipients_file(f)?);
-                }
-
-                age::encrypt(all_recipients, armor, file.as_deref(), output.as_deref())?;
+                println!("{}", age::derive_recipient(&seed, &realm));
             }
-        }
 
-        Commands::Dec {
-            ref key,
-            passphrase,
-            ref output,
-            ref file,
-        } => {
-            if passphrase {
-                let pass = prompt_passphrase("passphrase")?;
-                age::decrypt_passphrase(&pass, file.as_deref(), output.as_deref())?;
-            } else if let Some(key_file) = key {
-                age::decrypt_with_file(key_file, file.as_deref(), output.as_deref())?;
-            } else {
+            AgeAction::Key => {
                 let seed = get_seed(&cli)?;
-                let identity = age::derive_identity(&seed, &realm);
-                age::decrypt(&identity, file.as_deref(), output.as_deref())?;
+                println!("{}", age::derive_identity(&seed, &realm));
             }
-        }
 
-        // signing
-        Commands::Sign {
-            ref output,
-            binary,
-            ref file,
-        } => {
-            let seed = get_seed(&cli)?;
-            let sig = sign::sign(&seed, &realm, file.as_deref())?;
-
-            if binary {
-                if let Some(path) = output {
-                    std::fs::write(path, &sig)?;
+            AgeAction::Encrypt {
+                ref recipients,
+                ref recipient_files,
+                self_,
+                passphrase,
+                armor,
+                ref output,
+                ref file,
+            } => {
+                if *passphrase {
+                    let pass = prompt_passphrase("passphrase")?;
+                    age::encrypt_passphrase(&pass, *armor, file.as_deref(), output.as_deref())?;
                 } else {
-                    std::io::stdout().write_all(&sig)?;
+                    let seed = get_seed(&cli)?;
+                    let use_self = *self_ || (recipients.is_empty() && recipient_files.is_empty());
+
+                    let mut all_recipients: Vec<Box<dyn ::age::Recipient + Send>> = vec![];
+
+                    if use_self {
+                        let recipient_str = age::derive_recipient(&seed, &realm);
+                        all_recipients.push(age::parse_recipient(&recipient_str)?);
+                    }
+
+                    for r in recipients {
+                        all_recipients.push(age::parse_recipient(r)?);
+                    }
+
+                    for f in recipient_files {
+                        all_recipients.extend(age::parse_recipients_file(f)?);
+                    }
+
+                    age::encrypt(all_recipients, *armor, file.as_deref(), output.as_deref())?;
                 }
-            } else {
-                use base64::Engine;
-                let encoded = base64::engine::general_purpose::STANDARD.encode(&sig);
-                if let Some(path) = output {
-                    std::fs::write(path, &encoded)?;
+            }
+
+            AgeAction::Decrypt {
+                ref key,
+                passphrase,
+                ref output,
+                ref file,
+            } => {
+                if *passphrase {
+                    let pass = prompt_passphrase("passphrase")?;
+                    age::decrypt_passphrase(&pass, file.as_deref(), output.as_deref())?;
+                } else if let Some(key_file) = key {
+                    age::decrypt_with_file(key_file, file.as_deref(), output.as_deref())?;
                 } else {
-                    println!("{encoded}");
+                    let seed = get_seed(&cli)?;
+                    let identity = age::derive_identity(&seed, &realm);
+                    age::decrypt(&identity, file.as_deref(), output.as_deref())?;
                 }
-            }
-        }
-
-        Commands::Verify {
-            ref signature,
-            ref pubkey,
-            ref file,
-        } => {
-            let sig_bytes = if let Some(path) = signature.strip_prefix('@') {
-                std::fs::read(path)?
-            } else {
-                use base64::Engine;
-                base64::engine::general_purpose::STANDARD.decode(signature)?
-            };
-
-            let pubkey_str = if let Some(pk) = pubkey.as_ref() {
-                pk.clone()
-            } else {
-                let seed = get_seed(&cli)?;
-                sign::derive_public(&seed, &realm)
-            };
-
-            let valid = sign::verify(&pubkey_str, &sig_bytes, file.as_deref())?;
-
-            if valid {
-                eprintln!("valid");
-            } else {
-                eprintln!("invalid");
-                std::process::exit(1);
-            }
-        }
-
-        // derivation
-        Commands::Pw {
-            ref site,
-            length,
-            no_symbols,
-            ref symbols,
-            counter,
-        } => {
-            let seed = get_seed(&cli)?;
-            let pw = password::derive(&seed, &realm, site, counter, length, !no_symbols, symbols)?;
-            print!("{}", pw.as_str());
-        }
-
-        Commands::Raw {
-            ref path,
-            length,
-            hex: _,
-            base64,
-            binary,
-        } => {
-            let seed = get_seed(&cli)?;
-            let bytes = derive::raw(&seed, &realm, path, length);
-
-            if binary {
-                std::io::stdout().write_all(&bytes)?;
-            } else if base64 {
-                use base64::Engine;
-                println!(
-                    "{}",
-                    base64::engine::general_purpose::STANDARD.encode(&*bytes)
-                );
-            } else {
-                println!("{}", hex::encode(&*bytes));
-            }
-        }
-
-        Commands::Mnemonic { words } => {
-            eprintln!("WARNING: Cryptocurrency seed phrase");
-            eprintln!("  - Same master seed = same mnemonic = same wallets");
-            eprintln!("  - Compromise of master seed = loss of funds");
-            eprintln!("  - Consider: dedicated realm, hardware wallet");
-            eprintln!();
-
-            let seed = get_seed(&cli)?;
-            let mnemonic = derive::mnemonic(&seed, &realm, words)?;
-            println!("{}", mnemonic.as_str());
-        }
-
-        // agent
-        Commands::SshAdd { lifetime, confirm } => {
-            let seed = get_seed(&cli)?;
-            ssh::add_to_agent(&seed, &realm, lifetime, confirm)?;
-            eprintln!("added 1seed:{realm} to agent");
-        }
-
-        // config
-        Commands::Config { action } => match action {
-            None => {
-                let config = Config::load()?;
-                if let Some(r) = &config.realm {
-                    println!("realm = {r}");
-                }
-                if let Some(f) = &config.seed_file {
-                    println!("seed-file = {}", f.display());
-                }
-            }
-            Some(ConfigAction::Set { key, value }) => {
-                let mut config = Config::load().unwrap_or_default();
-                match key.as_str() {
-                    "realm" => config.realm = Some(value),
-                    "seed-file" => config.seed_file = Some(PathBuf::from(value)),
-                    _ => return Err(format!("unknown key: {key}").into()),
-                }
-                config.save()?;
-            }
-            Some(ConfigAction::Get { key }) => {
-                let config = Config::load()?;
-                match key.as_str() {
-                    "realm" => {
-                        if let Some(v) = config.realm {
-                            println!("{v}");
-                        }
-                    }
-                    "seed-file" => {
-                        if let Some(v) = config.seed_file {
-                            println!("{}", v.display());
-                        }
-                    }
-                    _ => return Err(format!("unknown key: {key}").into()),
-                }
-            }
-            Some(ConfigAction::Path) => {
-                println!("{}", Config::path()?.display());
             }
         },
+
+        Commands::Ssh { ref action } => match action {
+            SshAction::Pub => {
+                let seed = get_seed(&cli)?;
+                println!("{}", ssh::derive_public(&seed, &realm));
+            }
+
+            SshAction::Key => {
+                let seed = get_seed(&cli)?;
+                print!("{}", ssh::derive_private(&seed, &realm));
+            }
+
+            SshAction::Add { lifetime, confirm } => {
+                let seed = get_seed(&cli)?;
+                ssh::add_to_agent(&seed, &realm, *lifetime, *confirm)?;
+                eprintln!("added 1seed:{realm} to agent");
+            }
+        },
+
+        Commands::Sign { ref action } => match action {
+            SignAction::Pub => {
+                let seed = get_seed(&cli)?;
+                println!("{}", sign::derive_public(&seed, &realm));
+            }
+
+            SignAction::Data {
+                ref output,
+                binary,
+                ref file,
+            } => {
+                let seed = get_seed(&cli)?;
+                let sig = sign::sign(&seed, &realm, file.as_deref())?;
+
+                if *binary {
+                    if let Some(path) = output {
+                        std::fs::write(path, &sig)?;
+                    } else {
+                        std::io::stdout().write_all(&sig)?;
+                    }
+                } else {
+                    use base64::Engine;
+                    let encoded = base64::engine::general_purpose::STANDARD.encode(&sig);
+                    if let Some(path) = output {
+                        std::fs::write(path, &encoded)?;
+                    } else {
+                        println!("{encoded}");
+                    }
+                }
+            }
+
+            SignAction::Verify {
+                ref signature,
+                ref pubkey,
+                ref file,
+            } => {
+                let sig_bytes = if let Some(path) = signature.strip_prefix('@') {
+                    std::fs::read(path)?
+                } else {
+                    use base64::Engine;
+                    base64::engine::general_purpose::STANDARD.decode(signature)?
+                };
+
+                let pubkey_str = if let Some(pk) = pubkey.as_ref() {
+                    pk.clone()
+                } else {
+                    let seed = get_seed(&cli)?;
+                    sign::derive_public(&seed, &realm)
+                };
+
+                let valid = sign::verify(&pubkey_str, &sig_bytes, file.as_deref())?;
+
+                if valid {
+                    eprintln!("valid");
+                } else {
+                    eprintln!("invalid");
+                    std::process::exit(1);
+                }
+            }
+        },
+
+        Commands::Derive { ref action } => match action {
+            DeriveAction::Password {
+                ref site,
+                length,
+                no_symbols,
+                ref symbols,
+                counter,
+            } => {
+                let seed = get_seed(&cli)?;
+                let pw = password::derive(
+                    &seed,
+                    &realm,
+                    site,
+                    *counter,
+                    *length,
+                    !*no_symbols,
+                    symbols,
+                )?;
+                print!("{}", pw.as_str());
+            }
+
+            DeriveAction::Mnemonic { words } => {
+                eprintln!("WARNING: Cryptocurrency seed phrase");
+                eprintln!("  - Same master seed = same mnemonic = same wallets");
+                eprintln!("  - Compromise of master seed = loss of funds");
+                eprintln!("  - Consider: dedicated realm, hardware wallet");
+                eprintln!();
+
+                let seed = get_seed(&cli)?;
+                let mnemonic = derive::mnemonic(&seed, &realm, *words)?;
+                println!("{}", mnemonic.as_str());
+            }
+
+            DeriveAction::Raw {
+                ref path,
+                length,
+                hex: _,
+                base64,
+                binary,
+            } => {
+                let seed = get_seed(&cli)?;
+                let bytes = derive::raw(&seed, &realm, path, *length);
+
+                if *binary {
+                    std::io::stdout().write_all(&bytes)?;
+                } else if *base64 {
+                    use base64::Engine;
+                    println!(
+                        "{}",
+                        base64::engine::general_purpose::STANDARD.encode(&*bytes)
+                    );
+                } else {
+                    println!("{}", hex::encode(&*bytes));
+                }
+            }
+        },
+
+        Commands::Set { key, value } => {
+            let mut config = Config::load().unwrap_or_default();
+            match key.as_str() {
+                "realm" => config.realm = Some(value),
+                "seed-file" => config.seed_file = Some(PathBuf::from(value)),
+                _ => return Err(format!("unknown key: {key}").into()),
+            }
+            config.save()?;
+        }
+
+        Commands::Get { key } => {
+            let config = Config::load()?;
+            match key.as_str() {
+                "realm" => {
+                    if let Some(v) = config.realm {
+                        println!("{v}");
+                    }
+                }
+                "seed-file" => {
+                    if let Some(v) = config.seed_file {
+                        println!("{}", v.display());
+                    }
+                }
+                _ => return Err(format!("unknown key: {key}").into()),
+            }
+        }
 
         Commands::Realms { action } => match action {
             None => {

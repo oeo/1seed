@@ -51,48 +51,40 @@ Requires: `ssh-add` (for agent integration)
 # Option 1: Use a seed file (recommended)
 dd if=/dev/urandom bs=32 count=1 > ~/.seed
 chmod 600 ~/.seed
-1seed config set seed-file ~/.seed
+1seed set seed-file ~/.seed
 
 # Option 2: Use a passphrase (brainwallet)
 echo "your long memorable passphrase here" > ~/.seed
 chmod 600 ~/.seed
-1seed config set seed-file ~/.seed
+1seed set seed-file ~/.seed
 
 # Option 3: No file, prompt every time
 # (just don't set seed-file)
 
 # Show your age public key
-1seed pub
+1seed age pub
 
 # Add SSH key to agent
-1seed ssh-add
+1seed ssh add
 
 # Encrypt to self
-echo "secret" | 1seed enc > secret.age
+echo "secret" | 1seed age encrypt > secret.age
 
 # Decrypt
-1seed dec < secret.age
+1seed age decrypt < secret.age
 
 # Derive a password
-1seed pw github.com
+1seed derive password github.com
 ```
 
 ## Commands
 
-### Key Export
+### Age Encryption
 
 ```
-1seed pub         Age public key
-1seed priv        Age private key
-1seed ssh         SSH private key
-1seed ssh-pub     SSH public key
-1seed sign-pub    Ed25519 signing public key
-```
-
-### Encryption
-
-```
-1seed enc [OPTIONS] [FILE]
+1seed age pub                      Show age public key
+1seed age key                      Show age private key
+1seed age encrypt [OPTIONS] [FILE]
   -R, --recipient KEY     Add recipient (repeatable)
   -F, --recipients-file   Add recipients from file (repeatable)
   -s, --self              Include self as recipient
@@ -100,7 +92,7 @@ echo "secret" | 1seed enc > secret.age
   -a, --armor             ASCII armor output
   -o, --output FILE       Output file
 
-1seed dec [OPTIONS] [FILE]
+1seed age decrypt [OPTIONS] [FILE]
   -k, --key FILE          Key file (instead of derived)
   -p, --passphrase        Decrypt with passphrase
   -o, --output FILE       Output file
@@ -108,57 +100,56 @@ echo "secret" | 1seed enc > secret.age
 
 Default: encrypt to self, decrypt with derived key.
 
+### SSH Keys
+
+```
+1seed ssh pub             Show SSH public key
+1seed ssh key             Show SSH private key
+1seed ssh add [OPTIONS]   Add SSH key to agent
+  -t, --lifetime SEC      Key lifetime
+  -c, --confirm           Require confirmation
+```
+
 ### Signing
 
 ```
-1seed sign [OPTIONS] [FILE]
+1seed sign pub                 Show signing public key
+1seed sign data [OPTIONS] [FILE]
   -o, --output FILE       Output file
   --binary                Binary output (default: base64)
 
-1seed verify SIGNATURE [FILE]
+1seed sign verify SIGNATURE [FILE]
   -k, --pubkey KEY        Public key (default: derived)
 ```
 
 ### Derivation
 
 ```
-1seed pw [OPTIONS] SITE
+1seed derive password [OPTIONS] SITE
   -l, --length N          Password length (default: 16)
-  -n, --counter N         Rotation counter (default: 1)
+  -n, --counter N          Rotation counter (default: 1)
   --no-symbols            Alphanumeric only
   --symbols SET           Symbol set (default: !@#$%^&*)
 
-1seed raw [OPTIONS] PATH
+1seed derive raw [OPTIONS] PATH
   -l, --length N          Byte length (default: 32)
   --hex                   Output as hex (default)
   --base64                Output as base64
   --binary                Output as raw bytes
 
-1seed mnemonic [OPTIONS]
+1seed derive mnemonic [OPTIONS]
   -w, --words N           Word count: 12/15/18/21/24 (default: 24)
-```
-
-### SSH Agent
-
-```
-1seed ssh-add [OPTIONS]
-  -t, --lifetime SEC      Key lifetime
-  -c, --confirm           Require confirmation
 ```
 
 ### Configuration
 
 ```
-1seed config              List config values
-1seed config set K V      Set value (realm, seed-file)
-1seed config get K        Get value
-1seed config path         Show config file path
-
+1seed info                Show config and derived keys
+1seed set KEY VALUE       Set config value (realm, seed-file)
+1seed get KEY             Get config value
 1seed realms              List known realms
 1seed realms add NAME     Track realm
 1seed realms rm NAME      Untrack realm
-
-1seed info                Show status and public keys
 ```
 
 ## Realms
@@ -166,9 +157,9 @@ Default: encrypt to self, decrypt with derived key.
 Realms namespace all derived keys. Same seed, different realm = different keys.
 
 ```bash
-1seed -r personal pub     # Personal age key
-1seed -r work pub         # Work age key (different)
-1seed -r work ssh-add     # Work SSH key
+1seed --realm personal age pub     # Personal age key
+1seed --realm work age pub         # Work age key (different)
+1seed --realm work ssh add         # Work SSH key
 
 # Track realms for reference
 1seed realms add personal
@@ -179,7 +170,7 @@ Realms namespace all derived keys. Same seed, different realm = different keys.
 Set a default:
 
 ```bash
-1seed config set realm personal
+1seed set realm personal
 ```
 
 ## Password Rotation
@@ -187,7 +178,7 @@ Set a default:
 When a password is compromised:
 
 ```bash
-1seed pw github.com -n 2   # Increment counter
+1seed derive password github.com -n 2   # Increment counter
 ```
 
 Same site, different counter = different password.
@@ -227,31 +218,31 @@ From this, everything derives deterministically:
 cat > team.txt << EOF
 age1alice...
 age1bob...
-$(1seed pub)
+$(1seed age pub)
 EOF
 
 # Encrypt
-1seed enc -F team.txt < secrets.json > secrets.json.age
+1seed age encrypt -F team.txt < secrets.json > secrets.json.age
 ```
 
 ### Sign a release
 
 ```bash
-1seed sign release.tar.gz > release.tar.gz.sig
-1seed sign-pub > signing-key.pub
+1seed sign data release.tar.gz > release.tar.gz.sig
+1seed sign pub > signing-key.pub
 
 # Others verify
-1seed verify -k "$(cat signing-key.pub)" "$(cat release.tar.gz.sig)" release.tar.gz
+1seed sign verify -k "$(cat signing-key.pub)" "$(cat release.tar.gz.sig)" release.tar.gz
 ```
 
 ### Multiple machines
 
 ```bash
 # Machine A
-1seed ssh-pub >> ~/.ssh/authorized_keys
+1seed ssh pub >> ~/.ssh/authorized_keys
 
 # Machine B (same seed)
-1seed ssh-add
+1seed ssh add
 ssh user@machine-a  # works
 ```
 

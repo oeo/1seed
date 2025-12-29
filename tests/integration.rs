@@ -40,7 +40,7 @@ impl TestContext {
         cmd.arg("-f");
         cmd.arg(&self.seed_file);
         // always pass explicit realm to avoid config file pollution from parallel tests
-        cmd.arg("-r");
+        cmd.arg("--realm");
         cmd.arg(realm);
         cmd
     }
@@ -50,8 +50,8 @@ impl TestContext {
 fn pub_deterministic() {
     let ctx = TestContext::new();
 
-    let out1 = ctx.cmd().arg("pub").output().unwrap();
-    let out2 = ctx.cmd().arg("pub").output().unwrap();
+    let out1 = ctx.cmd().args(["age", "pub"]).output().unwrap();
+    let out2 = ctx.cmd().args(["age", "pub"]).output().unwrap();
 
     assert!(out1.status.success());
     assert_eq!(out1.stdout, out2.stdout);
@@ -62,8 +62,16 @@ fn pub_deterministic() {
 fn different_realms_different_keys() {
     let ctx = TestContext::new();
 
-    let out1 = ctx.cmd_realm("realm1").arg("pub").output().unwrap();
-    let out2 = ctx.cmd_realm("realm2").arg("pub").output().unwrap();
+    let out1 = ctx
+        .cmd_realm("realm1")
+        .args(["age", "pub"])
+        .output()
+        .unwrap();
+    let out2 = ctx
+        .cmd_realm("realm2")
+        .args(["age", "pub"])
+        .output()
+        .unwrap();
 
     assert!(out1.status.success());
     assert!(out2.status.success());
@@ -74,7 +82,7 @@ fn different_realms_different_keys() {
 fn ssh_pub_format() {
     let ctx = TestContext::new();
 
-    let out = ctx.cmd().arg("ssh-pub").output().unwrap();
+    let out = ctx.cmd().args(["ssh", "pub"]).output().unwrap();
     assert!(out.status.success());
 
     let key = String::from_utf8_lossy(&out.stdout);
@@ -90,7 +98,7 @@ fn encrypt_decrypt_roundtrip() {
     // encrypt
     let mut enc = ctx
         .cmd()
-        .args(["enc", "-a"])
+        .args(["age", "encrypt", "-a"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()
@@ -106,7 +114,7 @@ fn encrypt_decrypt_roundtrip() {
     // decrypt
     let mut dec = ctx
         .cmd()
-        .arg("dec")
+        .args(["age", "decrypt"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()
@@ -123,8 +131,16 @@ fn encrypt_decrypt_roundtrip() {
 fn password_deterministic() {
     let ctx = TestContext::new();
 
-    let out1 = ctx.cmd().args(["pw", "github.com"]).output().unwrap();
-    let out2 = ctx.cmd().args(["pw", "github.com"]).output().unwrap();
+    let out1 = ctx
+        .cmd()
+        .args(["derive", "password", "github.com"])
+        .output()
+        .unwrap();
+    let out2 = ctx
+        .cmd()
+        .args(["derive", "password", "github.com"])
+        .output()
+        .unwrap();
 
     assert!(out1.status.success());
     assert_eq!(out1.stdout, out2.stdout);
@@ -135,8 +151,16 @@ fn password_deterministic() {
 fn password_counter_changes_output() {
     let ctx = TestContext::new();
 
-    let out1 = ctx.cmd().args(["pw", "site", "-n", "1"]).output().unwrap();
-    let out2 = ctx.cmd().args(["pw", "site", "-n", "2"]).output().unwrap();
+    let out1 = ctx
+        .cmd()
+        .args(["derive", "password", "site", "-n", "1"])
+        .output()
+        .unwrap();
+    let out2 = ctx
+        .cmd()
+        .args(["derive", "password", "site", "-n", "2"])
+        .output()
+        .unwrap();
 
     assert!(out1.status.success());
     assert!(out2.status.success());
@@ -147,7 +171,11 @@ fn password_counter_changes_output() {
 fn password_length() {
     let ctx = TestContext::new();
 
-    let out = ctx.cmd().args(["pw", "site", "-l", "32"]).output().unwrap();
+    let out = ctx
+        .cmd()
+        .args(["derive", "password", "site", "-l", "32"])
+        .output()
+        .unwrap();
     assert!(out.status.success());
     assert_eq!(out.stdout.len(), 32);
 }
@@ -160,7 +188,7 @@ fn sign_verify_roundtrip() {
     // sign
     let mut sign = ctx
         .cmd()
-        .arg("sign")
+        .args(["sign", "data"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()
@@ -178,7 +206,7 @@ fn sign_verify_roundtrip() {
     // verify
     let mut verify = ctx
         .cmd()
-        .args(["verify", &sig])
+        .args(["sign", "verify", &sig])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -197,7 +225,7 @@ fn verify_fails_wrong_data() {
     // sign
     let mut sign = ctx
         .cmd()
-        .arg("sign")
+        .args(["sign", "data"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()
@@ -213,7 +241,7 @@ fn verify_fails_wrong_data() {
     // verify with different data
     let mut verify = ctx
         .cmd()
-        .args(["verify", &sig])
+        .args(["sign", "verify", &sig])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -236,7 +264,7 @@ fn raw_hex_output() {
 
     let out = ctx
         .cmd()
-        .args(["raw", "test", "-l", "16"])
+        .args(["derive", "raw", "test", "-l", "16"])
         .output()
         .unwrap();
     assert!(out.status.success());
@@ -252,7 +280,7 @@ fn raw_base64_output() {
 
     let out = ctx
         .cmd()
-        .args(["raw", "test", "-l", "32", "--base64"])
+        .args(["derive", "raw", "test", "-l", "32", "--base64"])
         .output()
         .unwrap();
     assert!(out.status.success());
@@ -268,7 +296,7 @@ fn mnemonic_word_counts() {
     for words in [12, 15, 18, 21, 24] {
         let out = ctx
             .cmd()
-            .args(["mnemonic", "-w", &words.to_string()])
+            .args(["derive", "mnemonic", "-w", &words.to_string()])
             .output()
             .unwrap();
 
@@ -290,7 +318,7 @@ fn config_set_get() {
     let out = ctx
         .cmd()
         .env("XDG_CONFIG_HOME", &config_dir)
-        .args(["config", "set", "realm", "test-realm"])
+        .args(["set", "realm", "test-realm"])
         .output()
         .unwrap();
     assert!(out.status.success());
@@ -298,7 +326,7 @@ fn config_set_get() {
     let out = ctx
         .cmd()
         .env("XDG_CONFIG_HOME", &config_dir)
-        .args(["config", "get", "realm"])
+        .args(["get", "realm"])
         .output()
         .unwrap();
     assert!(out.status.success());
