@@ -55,7 +55,7 @@ jobs:
           ONESEED_TEST_MODE: "1"
 
       - name: Integration tests
-        run: cargo test --test integration
+        run: cargo test --test integration -- --test-threads=1
         env:
           ONESEED_TEST_MODE: "1"
 
