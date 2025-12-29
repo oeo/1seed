@@ -67,8 +67,14 @@ fn encrypt_decrypt_roundtrip() {
     // verify the public key and identity match
     let pub_out = ctx.cmd().arg("pub").output().unwrap();
     let priv_out = ctx.cmd().arg("priv").output().unwrap();
-    eprintln!("Public key: {}", String::from_utf8_lossy(&pub_out.stdout).trim());
-    eprintln!("Identity: {}", String::from_utf8_lossy(&priv_out.stdout).trim());
+    eprintln!(
+        "Public key: {}",
+        String::from_utf8_lossy(&pub_out.stdout).trim()
+    );
+    eprintln!(
+        "Identity: {}",
+        String::from_utf8_lossy(&priv_out.stdout).trim()
+    );
 
     // encrypt
     let mut enc = ctx
