@@ -1,0 +1,48 @@
+[package]
+name = "oneseed"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Deterministic cryptographic keys from a single seed"
+repository = "https://github.com/oeo/1seed"
+keywords = ["cryptography", "age", "ssh", "keys", "deterministic"]
+categories = ["command-line-utilities", "cryptography"]
+
+[[bin]]
+name = "1seed"
+path = "src/main.rs"
+
+[dependencies]
+# KDF
+scrypt = "0.11"
+hkdf = "0.12"
+sha2 = "0.10"
+
+# Crypto primitives
+x25519-dalek = { version = "2.0", features = ["static_secrets"] }
+ed25519-dalek = { version = "2.1", features = ["rand_core"] }
+zeroize = { version = "1.7", features = ["derive"] }
+
+# Key formats
+age = { version = "0.10", features = ["armor"] }
+ssh-key = { version = "0.6", features = ["ed25519"] }
+bip39 = "2.0"
+
+# CLI
+clap = { version = "4.4", features = ["derive", "env"] }
+rpassword = "7.3"
+
+# Utilities
+base64 = "0.21"
+hex = "0.4"
+dirs = "5.0"
+toml = "0.8"
+serde = { version = "1.0", features = ["derive"] }
+bech32 = "0.9"
+
+[dev-dependencies]
+tempfile = "3.10"
+
+[profile.release]
+lto = true
+strip = true

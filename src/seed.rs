@@ -1,0 +1,97 @@
+use hkdf::Hkdf;
+use scrypt::{scrypt, Params};
+use sha2::Sha256;
+use std::path::Path;
+use zeroize::{Zeroize, Zeroizing};
+
+const SCRYPT_N: u8 = 20; // 2^20 = ~1GB memory
+const SCRYPT_R: u32 = 8;
+const SCRYPT_P: u32 = 1;
+const VERSION: &str = "v1";
+
+pub struct Seed {
+    master: Zeroizing<[u8; 32]>,
+}
+
+impl Seed {
+    pub fn from_passphrase(passphrase: &str) -> Result<Self, Box<dyn std::error::Error>> {
+        let params = Params::new(SCRYPT_N, SCRYPT_R, SCRYPT_P, 32)?;
+        let mut master = Zeroizing::new([0u8; 32]);
+        scrypt(passphrase.as_bytes(), b"1seed", &params, master.as_mut())?;
+        Ok(Self { master })
+    }
+
+    pub fn from_file(path: &Path) -> Result<Self, Box<dyn std::error::Error>> {
+        let bytes = std::fs::read(path)?;
+
+        if bytes.len() >= 32 && bytes.iter().any(|&b| b > 127 || b < 32) {
+            // looks like binary data, use first 32 bytes
+            let mut master = Zeroizing::new([0u8; 32]);
+            master.copy_from_slice(&bytes[..32]);
+            Ok(Self { master })
+        } else {
+            // treat as passphrase
+            let passphrase = String::from_utf8_lossy(&bytes);
+            let passphrase = passphrase.trim();
+            Self::from_passphrase(passphrase)
+        }
+    }
+
+    pub fn derive(&self, realm: &str, key_type: &str, length: usize) -> Zeroizing<Vec<u8>> {
+        let path = format!("{VERSION}/{realm}/{key_type}");
+        let hk = Hkdf::<Sha256>::new(None, self.master.as_ref());
+        let mut output = Zeroizing::new(vec![0u8; length]);
+        hk.expand(path.as_bytes(), output.as_mut_slice())
+            .expect("length should be valid");
+        output
+    }
+
+    pub fn derive_32(&self, realm: &str, key_type: &str) -> Zeroizing<[u8; 32]> {
+        let bytes = self.derive(realm, key_type, 32);
+        let mut arr = Zeroizing::new([0u8; 32]);
+        arr.copy_from_slice(&bytes);
+        arr
+    }
+}
+
+impl Drop for Seed {
+    fn drop(&mut self) {
+        self.master.zeroize();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn deterministic_derivation() {
+        let seed1 = Seed::from_passphrase("test passphrase").unwrap();
+        let seed2 = Seed::from_passphrase("test passphrase").unwrap();
+
+        let key1 = seed1.derive("realm", "type", 32);
+        let key2 = seed2.derive("realm", "type", 32);
+
+        assert_eq!(key1.as_slice(), key2.as_slice());
+    }
+
+    #[test]
+    fn different_realms_different_keys() {
+        let seed = Seed::from_passphrase("test").unwrap();
+
+        let key1 = seed.derive("realm1", "age", 32);
+        let key2 = seed.derive("realm2", "age", 32);
+
+        assert_ne!(key1.as_slice(), key2.as_slice());
+    }
+
+    #[test]
+    fn different_types_different_keys() {
+        let seed = Seed::from_passphrase("test").unwrap();
+
+        let key1 = seed.derive("realm", "age", 32);
+        let key2 = seed.derive("realm", "ssh", 32);
+
+        assert_ne!(key1.as_slice(), key2.as_slice());
+    }
+}

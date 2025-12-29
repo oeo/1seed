@@ -1,0 +1,9 @@
+/target
+Cargo.lock
+*.age
+*.sig
+.seed
+*.swp
+*~
+.DS_Store
+CLAUDE.md
