@@ -25,6 +25,14 @@ Deterministic cryptographic keys from a single seed.
 
 ## Installation
 
+### Quick Install
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/oeo/1seed/master/install.sh | bash
+```
+
+### From Source
+
 ```bash
 cargo install --path .
 ```

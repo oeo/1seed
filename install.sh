@@ -96,19 +96,22 @@ main() {
     # extract
     info "Extracting..."
     cd "$tmp_dir"
-    
+
     if [[ $archive_ext == "tar.gz" ]]; then
         tar xzf "${asset_name}"
     else
         unzip -q "${asset_name}"
     fi
 
-    # find the binary
+    # find the binary (archive contains file named like "1seed-darwin-arm64")
     binary_name="1seed"
     [[ $platform == windows* ]] && binary_name="1seed.exe"
-    
-    if [[ -f "1seed-${platform}/${binary_name}" ]]; then
-        binary_path="1seed-${platform}/${binary_name}"
+
+    extracted_name="1seed-${platform}"
+    [[ $platform == windows* ]] && extracted_name="${extracted_name}.exe"
+
+    if [[ -f "${extracted_name}" ]]; then
+        binary_path="${extracted_name}"
     elif [[ -f "${binary_name}" ]]; then
         binary_path="${binary_name}"
     else
