@@ -21,9 +21,14 @@ impl Seed {
         } else {
             20
         };
+        eprintln!(
+            "[DEBUG] scrypt_n = {}, passphrase = {:?}",
+            scrypt_n, passphrase
+        );
         let params = Params::new(scrypt_n, SCRYPT_R, SCRYPT_P, 32)?;
         let mut master = Zeroizing::new([0u8; 32]);
         scrypt(passphrase.as_bytes(), b"1seed", &params, master.as_mut())?;
+        eprintln!("[DEBUG] master key (first 8 bytes) = {:02x?}", &master[..8]);
         Ok(Self { master })
     }
 
