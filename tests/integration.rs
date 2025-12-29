@@ -92,6 +92,11 @@ fn encrypt_decrypt_roundtrip() {
 
     dec.stdin.as_mut().unwrap().write_all(&ciphertext).unwrap();
     let dec_out = dec.wait_with_output().unwrap();
+    if !dec_out.status.success() {
+        eprintln!("Decrypt failed!");
+        eprintln!("Stderr: {}", String::from_utf8_lossy(&dec_out.stderr));
+        eprintln!("Stdout: {}", String::from_utf8_lossy(&dec_out.stdout));
+    }
     assert!(dec_out.status.success());
 
     assert_eq!(dec_out.stdout, plaintext);
