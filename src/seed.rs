@@ -4,7 +4,12 @@ use sha2::Sha256;
 use std::path::Path;
 use zeroize::{Zeroize, Zeroizing};
 
-const SCRYPT_N: u8 = 20; // 2^20 = ~1GB memory
+// production: N=20 (~1GB RAM, ~1 sec), tests: N=12 (~4MB RAM, ~10ms)
+#[cfg(not(test))]
+const SCRYPT_N: u8 = 20;
+#[cfg(test)]
+const SCRYPT_N: u8 = 12;
+
 const SCRYPT_R: u32 = 8;
 const SCRYPT_P: u32 = 1;
 const VERSION: &str = "v1";
