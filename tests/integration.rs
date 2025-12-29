@@ -30,11 +30,18 @@ impl TestContext {
     }
 
     fn cmd(&self) -> Command {
+        self.cmd_realm("default")
+    }
+
+    fn cmd_realm(&self, realm: &str) -> Command {
         let mut cmd = Command::new(env!("CARGO_BIN_EXE_1seed"));
         cmd.env("ONESEED_TEST_MODE", "1");
         cmd.env("XDG_CONFIG_HOME", &self.config_dir);
         cmd.arg("-f");
         cmd.arg(&self.seed_file);
+        // always pass explicit realm to avoid config file pollution from parallel tests
+        cmd.arg("-r");
+        cmd.arg(realm);
         cmd
     }
 }
@@ -55,8 +62,8 @@ fn pub_deterministic() {
 fn different_realms_different_keys() {
     let ctx = TestContext::new();
 
-    let out1 = ctx.cmd().args(["-r", "realm1", "pub"]).output().unwrap();
-    let out2 = ctx.cmd().args(["-r", "realm2", "pub"]).output().unwrap();
+    let out1 = ctx.cmd_realm("realm1").arg("pub").output().unwrap();
+    let out2 = ctx.cmd_realm("realm2").arg("pub").output().unwrap();
 
     assert!(out1.status.success());
     assert!(out2.status.success());
@@ -80,18 +87,6 @@ fn encrypt_decrypt_roundtrip() {
     let ctx = TestContext::new();
     let plaintext = b"hello world";
 
-    // verify seed file contents
-    let seed_bytes = std::fs::read(&ctx.seed_file).unwrap();
-    eprintln!("seed_file: {}", ctx.seed_file.display());
-    eprintln!("seed_bytes length: {}", seed_bytes.len());
-    eprintln!("seed_bytes: {:?}", String::from_utf8_lossy(&seed_bytes));
-
-    // get public key for diagnostics
-    let pub_out = ctx.cmd().arg("pub").output().unwrap();
-    assert!(pub_out.status.success());
-    let public_key = String::from_utf8_lossy(&pub_out.stdout);
-    eprintln!("Public key: {}", public_key.trim());
-
     // encrypt
     let mut enc = ctx
         .cmd()
@@ -103,29 +98,10 @@ fn encrypt_decrypt_roundtrip() {
 
     enc.stdin.as_mut().unwrap().write_all(plaintext).unwrap();
     let enc_out = enc.wait_with_output().unwrap();
-
-    if !enc_out.status.success() {
-        eprintln!("Encrypt failed!");
-        eprintln!("stderr: {}", String::from_utf8_lossy(&enc_out.stderr));
-        panic!("encrypt command failed");
-    }
+    assert!(enc_out.status.success());
 
     let ciphertext = enc_out.stdout;
     assert!(String::from_utf8_lossy(&ciphertext).contains("-----BEGIN AGE ENCRYPTED FILE-----"));
-
-    // get public key again to verify it's the same
-    let pub_out2 = ctx.cmd().arg("pub").output().unwrap();
-    assert!(pub_out2.status.success());
-    let public_key2 = String::from_utf8_lossy(&pub_out2.stdout);
-    eprintln!("Public key (2nd call): {}", public_key2.trim());
-
-    if public_key != public_key2 {
-        panic!(
-            "PUBLIC KEY CHANGED! First: {}, Second: {}",
-            public_key.trim(),
-            public_key2.trim()
-        );
-    }
 
     // decrypt
     let mut dec = ctx
@@ -133,21 +109,12 @@ fn encrypt_decrypt_roundtrip() {
         .arg("dec")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
         .spawn()
         .unwrap();
 
     dec.stdin.as_mut().unwrap().write_all(&ciphertext).unwrap();
     let dec_out = dec.wait_with_output().unwrap();
-
-    if !dec_out.status.success() {
-        eprintln!("Decrypt failed!");
-        eprintln!("stderr: {}", String::from_utf8_lossy(&dec_out.stderr));
-        eprintln!("stdout: {}", String::from_utf8_lossy(&dec_out.stdout));
-        eprintln!("seed_file: {}", ctx.seed_file.display());
-        eprintln!("config_dir: {}", ctx.config_dir.display());
-        panic!("decrypt command failed");
-    }
+    assert!(dec_out.status.success());
 
     assert_eq!(dec_out.stdout, plaintext);
 }
