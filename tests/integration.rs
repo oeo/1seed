@@ -80,6 +80,12 @@ fn encrypt_decrypt_roundtrip() {
     let ctx = TestContext::new();
     let plaintext = b"hello world";
 
+    // get public key for diagnostics
+    let pub_out = ctx.cmd().arg("pub").output().unwrap();
+    assert!(pub_out.status.success());
+    let public_key = String::from_utf8_lossy(&pub_out.stdout);
+    eprintln!("Public key: {}", public_key.trim());
+
     // encrypt
     let mut enc = ctx
         .cmd()
@@ -91,10 +97,25 @@ fn encrypt_decrypt_roundtrip() {
 
     enc.stdin.as_mut().unwrap().write_all(plaintext).unwrap();
     let enc_out = enc.wait_with_output().unwrap();
-    assert!(enc_out.status.success());
+
+    if !enc_out.status.success() {
+        eprintln!("Encrypt failed!");
+        eprintln!("stderr: {}", String::from_utf8_lossy(&enc_out.stderr));
+        panic!("encrypt command failed");
+    }
 
     let ciphertext = enc_out.stdout;
     assert!(String::from_utf8_lossy(&ciphertext).contains("-----BEGIN AGE ENCRYPTED FILE-----"));
+
+    // get public key again to verify it's the same
+    let pub_out2 = ctx.cmd().arg("pub").output().unwrap();
+    assert!(pub_out2.status.success());
+    let public_key2 = String::from_utf8_lossy(&pub_out2.stdout);
+    eprintln!("Public key (2nd call): {}", public_key2.trim());
+
+    if public_key != public_key2 {
+        panic!("PUBLIC KEY CHANGED! First: {}, Second: {}", public_key.trim(), public_key2.trim());
+    }
 
     // decrypt
     let mut dec = ctx
@@ -113,6 +134,8 @@ fn encrypt_decrypt_roundtrip() {
         eprintln!("Decrypt failed!");
         eprintln!("stderr: {}", String::from_utf8_lossy(&dec_out.stderr));
         eprintln!("stdout: {}", String::from_utf8_lossy(&dec_out.stdout));
+        eprintln!("seed_file: {}", ctx.seed_file.display());
+        eprintln!("config_dir: {}", ctx.config_dir.display());
         panic!("decrypt command failed");
     }
 
