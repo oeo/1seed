@@ -2,26 +2,34 @@ use std::io::Write;
 use std::process::{Command, Stdio};
 use tempfile::TempDir;
 
-fn seed_cmd() -> Command {
-    let mut cmd = Command::new(env!("CARGO_BIN_EXE_1seed"));
-    cmd.env("ONESEED_TEST_MODE", "1");
-    cmd
+struct TestContext {
+    _dir: TempDir,
+    seed_file: std::path::PathBuf,
 }
 
-fn setup_seed() -> TempDir {
-    let dir = TempDir::new().unwrap();
-    let seed_file = dir.path().join("seed");
-    std::fs::write(&seed_file, b"test seed phrase for integration tests").unwrap();
-    std::env::set_var("SEED_FILE", &seed_file);
-    dir
+impl TestContext {
+    fn new() -> Self {
+        let _dir = TempDir::new().unwrap();
+        let seed_file = _dir.path().join("seed");
+        std::fs::write(&seed_file, b"test seed phrase for integration tests").unwrap();
+        TestContext { _dir, seed_file }
+    }
+
+    fn cmd(&self) -> Command {
+        let mut cmd = Command::new(env!("CARGO_BIN_EXE_1seed"));
+        cmd.env("ONESEED_TEST_MODE", "1");
+        cmd.env("SEED_FILE", &self.seed_file);
+        cmd
+    }
 }
+
 
 #[test]
 fn pub_deterministic() {
-    let _dir = setup_seed();
+    let ctx = TestContext::new();
 
-    let out1 = seed_cmd().arg("pub").output().unwrap();
-    let out2 = seed_cmd().arg("pub").output().unwrap();
+    let out1 = ctx.cmd().arg("pub").output().unwrap();
+    let out2 = ctx.cmd().arg("pub").output().unwrap();
 
     assert!(out1.status.success());
     assert_eq!(out1.stdout, out2.stdout);
@@ -30,10 +38,10 @@ fn pub_deterministic() {
 
 #[test]
 fn different_realms_different_keys() {
-    let _dir = setup_seed();
+    let ctx = TestContext::new();
 
-    let out1 = seed_cmd().args(["-r", "realm1", "pub"]).output().unwrap();
-    let out2 = seed_cmd().args(["-r", "realm2", "pub"]).output().unwrap();
+    let out1 = ctx.cmd().args(["-r", "realm1", "pub"]).output().unwrap();
+    let out2 = ctx.cmd().args(["-r", "realm2", "pub"]).output().unwrap();
 
     assert!(out1.status.success());
     assert!(out2.status.success());
@@ -42,9 +50,9 @@ fn different_realms_different_keys() {
 
 #[test]
 fn ssh_pub_format() {
-    let _dir = setup_seed();
+    let ctx = TestContext::new();
 
-    let out = seed_cmd().arg("ssh-pub").output().unwrap();
+    let out = ctx.cmd().arg("ssh-pub").output().unwrap();
     assert!(out.status.success());
 
     let key = String::from_utf8_lossy(&out.stdout);
@@ -54,11 +62,11 @@ fn ssh_pub_format() {
 
 #[test]
 fn encrypt_decrypt_roundtrip() {
-    let _dir = setup_seed();
+    let ctx = TestContext::new();
     let plaintext = b"hello world";
 
     // encrypt
-    let mut enc = seed_cmd()
+    let mut enc = ctx.cmd()
         .args(["enc", "-a"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -73,15 +81,19 @@ fn encrypt_decrypt_roundtrip() {
     assert!(String::from_utf8_lossy(&ciphertext).contains("-----BEGIN AGE ENCRYPTED FILE-----"));
 
     // decrypt
-    let mut dec = seed_cmd()
+    let mut dec = ctx.cmd()
         .arg("dec")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
         .spawn()
         .unwrap();
 
     dec.stdin.as_mut().unwrap().write_all(&ciphertext).unwrap();
     let dec_out = dec.wait_with_output().unwrap();
+    if !dec_out.status.success() {
+        eprintln!("Dec stderr: {}", String::from_utf8_lossy(&dec_out.stderr));
+    }
     assert!(dec_out.status.success());
 
     assert_eq!(dec_out.stdout, plaintext);
@@ -89,10 +101,10 @@ fn encrypt_decrypt_roundtrip() {
 
 #[test]
 fn password_deterministic() {
-    let _dir = setup_seed();
+    let ctx = TestContext::new();
 
-    let out1 = seed_cmd().args(["pw", "github.com"]).output().unwrap();
-    let out2 = seed_cmd().args(["pw", "github.com"]).output().unwrap();
+    let out1 = ctx.cmd().args(["pw", "github.com"]).output().unwrap();
+    let out2 = ctx.cmd().args(["pw", "github.com"]).output().unwrap();
 
     assert!(out1.status.success());
     assert_eq!(out1.stdout, out2.stdout);
@@ -101,10 +113,10 @@ fn password_deterministic() {
 
 #[test]
 fn password_counter_changes_output() {
-    let _dir = setup_seed();
+    let ctx = TestContext::new();
 
-    let out1 = seed_cmd().args(["pw", "site", "-n", "1"]).output().unwrap();
-    let out2 = seed_cmd().args(["pw", "site", "-n", "2"]).output().unwrap();
+    let out1 = ctx.cmd().args(["pw", "site", "-n", "1"]).output().unwrap();
+    let out2 = ctx.cmd().args(["pw", "site", "-n", "2"]).output().unwrap();
 
     assert!(out1.status.success());
     assert!(out2.status.success());
@@ -113,9 +125,9 @@ fn password_counter_changes_output() {
 
 #[test]
 fn password_length() {
-    let _dir = setup_seed();
+    let ctx = TestContext::new();
 
-    let out = seed_cmd()
+    let out = ctx.cmd()
         .args(["pw", "site", "-l", "32"])
         .output()
         .unwrap();
@@ -125,11 +137,11 @@ fn password_length() {
 
 #[test]
 fn sign_verify_roundtrip() {
-    let _dir = setup_seed();
+    let ctx = TestContext::new();
     let data = b"data to sign";
 
     // sign
-    let mut sign = seed_cmd()
+    let mut sign = ctx.cmd()
         .arg("sign")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -146,7 +158,7 @@ fn sign_verify_roundtrip() {
         .to_string();
 
     // verify
-    let mut verify = seed_cmd()
+    let mut verify = ctx.cmd()
         .args(["verify", &sig])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -161,10 +173,10 @@ fn sign_verify_roundtrip() {
 
 #[test]
 fn verify_fails_wrong_data() {
-    let _dir = setup_seed();
+    let ctx = TestContext::new();
 
     // sign
-    let mut sign = seed_cmd()
+    let mut sign = ctx.cmd()
         .arg("sign")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -179,7 +191,7 @@ fn verify_fails_wrong_data() {
         .to_string();
 
     // verify with different data
-    let mut verify = seed_cmd()
+    let mut verify = ctx.cmd()
         .args(["verify", &sig])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -199,9 +211,9 @@ fn verify_fails_wrong_data() {
 
 #[test]
 fn raw_hex_output() {
-    let _dir = setup_seed();
+    let ctx = TestContext::new();
 
-    let out = seed_cmd()
+    let out = ctx.cmd()
         .args(["raw", "test", "-l", "16"])
         .output()
         .unwrap();
@@ -214,9 +226,9 @@ fn raw_hex_output() {
 
 #[test]
 fn raw_base64_output() {
-    let _dir = setup_seed();
+    let ctx = TestContext::new();
 
-    let out = seed_cmd()
+    let out = ctx.cmd()
         .args(["raw", "test", "-l", "32", "--base64"])
         .output()
         .unwrap();
@@ -228,15 +240,21 @@ fn raw_base64_output() {
 
 #[test]
 fn mnemonic_word_counts() {
-    let _dir = setup_seed();
+    let ctx = TestContext::new();
 
     for words in [12, 15, 18, 21, 24] {
-        let out = seed_cmd()
+        let out = ctx.cmd()
             .args(["mnemonic", "-w", &words.to_string()])
             .output()
             .unwrap();
 
-        assert!(out.status.success());
+        if !out.status.success() {
+            eprintln!("Mnemonic failed for {} words", words);
+            eprintln!("Stderr: {}", String::from_utf8_lossy(&out.stderr));
+            eprintln!("Stdout: {}", String::from_utf8_lossy(&out.stdout));
+            eprintln!("Exit code: {}", out.status);
+        }
+        assert!(out.status.success(), "mnemonic command failed for {} words", words);
 
         let mnemonic = String::from_utf8_lossy(&out.stdout);
         let count = mnemonic.trim().split_whitespace().count();
@@ -246,20 +264,20 @@ fn mnemonic_word_counts() {
 
 #[test]
 fn config_set_get() {
+    let ctx = TestContext::new();
     let dir = TempDir::new().unwrap();
     let config_dir = dir.path().join("config");
     std::fs::create_dir_all(&config_dir).unwrap();
 
-    // override config location via XDG
-    std::env::set_var("XDG_CONFIG_HOME", &config_dir);
-
-    let out = seed_cmd()
+    let out = ctx.cmd()
+        .env("XDG_CONFIG_HOME", &config_dir)
         .args(["config", "set", "realm", "test-realm"])
         .output()
         .unwrap();
     assert!(out.status.success());
 
-    let out = seed_cmd()
+    let out = ctx.cmd()
+        .env("XDG_CONFIG_HOME", &config_dir)
         .args(["config", "get", "realm"])
         .output()
         .unwrap();
@@ -269,28 +287,45 @@ fn config_set_get() {
 
 #[test]
 fn realms_add_list_rm() {
+    let ctx = TestContext::new();
     let dir = TempDir::new().unwrap();
     let config_dir = dir.path().join("config");
     std::fs::create_dir_all(&config_dir).unwrap();
-    std::env::set_var("XDG_CONFIG_HOME", &config_dir);
 
     // add
-    seed_cmd()
+    ctx.cmd()
+        .env("XDG_CONFIG_HOME", &config_dir)
         .args(["realms", "add", "personal"])
         .output()
         .unwrap();
-    seed_cmd().args(["realms", "add", "work"]).output().unwrap();
+    ctx.cmd()
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["realms", "add", "work"])
+        .output()
+        .unwrap();
 
     // list
-    let out = seed_cmd().arg("realms").output().unwrap();
+    let out = ctx.cmd()
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .arg("realms")
+        .output()
+        .unwrap();
     let list = String::from_utf8_lossy(&out.stdout);
     assert!(list.contains("personal"));
     assert!(list.contains("work"));
 
     // remove
-    seed_cmd().args(["realms", "rm", "work"]).output().unwrap();
+    ctx.cmd()
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .args(["realms", "rm", "work"])
+        .output()
+        .unwrap();
 
-    let out = seed_cmd().arg("realms").output().unwrap();
+    let out = ctx.cmd()
+        .env("XDG_CONFIG_HOME", &config_dir)
+        .arg("realms")
+        .output()
+        .unwrap();
     let list = String::from_utf8_lossy(&out.stdout);
     assert!(list.contains("personal"));
     assert!(!list.contains("work"));

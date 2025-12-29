@@ -91,9 +91,16 @@ pub fn decrypt(
     input: Option<&Path>,
     output: Option<&Path>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let ciphertext = read_input(input)?;
+    let mut ciphertext = read_input(input)?;
 
     let identity: age::x25519::Identity = identity.parse()?;
+
+    // handle armored input by de-armoring first
+    if ciphertext.starts_with(b"-----BEGIN AGE ENCRYPTED FILE-----") {
+        let armored_reader = age::armor::ArmoredReader::new(&ciphertext[..]);
+        ciphertext = std::io::Read::bytes(armored_reader)
+            .collect::<Result<Vec<u8>, _>>()?;
+    }
 
     let decryptor = match age::Decryptor::new(&ciphertext[..])? {
         age::Decryptor::Recipients(d) => d,
@@ -113,10 +120,17 @@ pub fn decrypt_with_file(
     input: Option<&Path>,
     output: Option<&Path>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let ciphertext = read_input(input)?;
+    let mut ciphertext = read_input(input)?;
 
     let key_content = std::fs::read_to_string(key_file)?;
     let identity: age::x25519::Identity = key_content.trim().parse()?;
+
+    // handle armored input by de-armoring first
+    if ciphertext.starts_with(b"-----BEGIN AGE ENCRYPTED FILE-----") {
+        let armored_reader = age::armor::ArmoredReader::new(&ciphertext[..]);
+        ciphertext = std::io::Read::bytes(armored_reader)
+            .collect::<Result<Vec<u8>, _>>()?;
+    }
 
     let decryptor = match age::Decryptor::new(&ciphertext[..])? {
         age::Decryptor::Recipients(d) => d,
@@ -136,7 +150,14 @@ pub fn decrypt_passphrase(
     input: Option<&Path>,
     output: Option<&Path>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let ciphertext = read_input(input)?;
+    let mut ciphertext = read_input(input)?;
+
+    // handle armored input by de-armoring first
+    if ciphertext.starts_with(b"-----BEGIN AGE ENCRYPTED FILE-----") {
+        let armored_reader = age::armor::ArmoredReader::new(&ciphertext[..]);
+        ciphertext = std::io::Read::bytes(armored_reader)
+            .collect::<Result<Vec<u8>, _>>()?;
+    }
 
     let decryptor = match age::Decryptor::new(&ciphertext[..])? {
         age::Decryptor::Recipients(_) => return Err("not encrypted with passphrase".into()),
