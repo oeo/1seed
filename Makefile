@@ -2,7 +2,7 @@ PREFIX ?= /usr/local
 BINDIR ?= $(PREFIX)/bin
 MANDIR ?= $(PREFIX)/share/man
 
-.PHONY: all build test install uninstall clean release
+.PHONY: all build test install uninstall clean release bump
 
 all: build
 
@@ -30,6 +30,23 @@ lint:
 	cargo clippy -- -D warnings
 
 check: fmt lint test
+
+bump:
+	@echo "Auto-incrementing version..."
+	@current=$$(grep '^version = ' Cargo.toml | sed 's/version = "\(.*\)"/\1/'); \
+	major=$$(echo $$current | cut -d. -f1); \
+	minor=$$(echo $$current | cut -d. -f2); \
+	patch=$$(echo $$current | cut -d. -f3); \
+	if [ "$(TYPE)" = "major" ]; then \
+		major=$$((major + 1)); minor=0; patch=0; \
+	elif [ "$(TYPE)" = "minor" ]; then \
+		minor=$$((minor + 1)); patch=0; \
+	else \
+		patch=$$((patch + 1)); \
+	fi; \
+	new_version="$$major.$$minor.$$patch"; \
+	echo "Current: $$current → New: $$new_version"; \
+	$(MAKE) release VERSION=$$new_version
 
 release:
 	@if [ -z "$(VERSION)" ]; then echo "Usage: make release VERSION=0.2.0"; exit 1; fi
