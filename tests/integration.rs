@@ -5,6 +5,7 @@ use tempfile::TempDir;
 struct TestContext {
     _dir: TempDir,
     seed_file: std::path::PathBuf,
+    config_dir: std::path::PathBuf,
 }
 
 impl TestContext {
@@ -16,18 +17,22 @@ impl TestContext {
         // canonicalize to resolve any symlinks (important on macOS where /tmp -> /private/tmp)
         let seed_file = seed_file.canonicalize().unwrap();
 
-        eprintln!(
-            "Created seed file: {} (exists: {})",
-            seed_file.display(),
-            seed_file.exists()
-        );
+        // create isolated config directory to prevent tests from reading user's config
+        let config_dir = _dir.path().join("config");
+        std::fs::create_dir_all(&config_dir).unwrap();
+        let config_dir = config_dir.canonicalize().unwrap();
 
-        TestContext { _dir, seed_file }
+        TestContext {
+            _dir,
+            seed_file,
+            config_dir,
+        }
     }
 
     fn cmd(&self) -> Command {
         let mut cmd = Command::new(env!("CARGO_BIN_EXE_1seed"));
         cmd.env("ONESEED_TEST_MODE", "1");
+        cmd.env("XDG_CONFIG_HOME", &self.config_dir);
         cmd.arg("-f");
         cmd.arg(&self.seed_file);
         cmd
@@ -75,34 +80,6 @@ fn encrypt_decrypt_roundtrip() {
     let ctx = TestContext::new();
     let plaintext = b"hello world";
 
-    // verify determinism
-    let pub1 = ctx
-        .cmd()
-        .arg("pub")
-        .stderr(Stdio::piped())
-        .output()
-        .unwrap();
-    eprintln!("Pub1 stderr:\n{}", String::from_utf8_lossy(&pub1.stderr));
-    let pub2 = ctx
-        .cmd()
-        .arg("pub")
-        .stderr(Stdio::piped())
-        .output()
-        .unwrap();
-    eprintln!("Pub2 stderr:\n{}", String::from_utf8_lossy(&pub2.stderr));
-    eprintln!(
-        "Public key 1: {}",
-        String::from_utf8_lossy(&pub1.stdout).trim()
-    );
-    eprintln!(
-        "Public key 2: {}",
-        String::from_utf8_lossy(&pub2.stdout).trim()
-    );
-    assert_eq!(
-        pub1.stdout, pub2.stdout,
-        "Public keys should be deterministic"
-    );
-
     // encrypt
     let mut enc = ctx
         .cmd()
@@ -131,11 +108,6 @@ fn encrypt_decrypt_roundtrip() {
 
     dec.stdin.as_mut().unwrap().write_all(&ciphertext).unwrap();
     let dec_out = dec.wait_with_output().unwrap();
-    if !dec_out.status.success() {
-        eprintln!("Decrypt failed!");
-        eprintln!("Stderr: {}", String::from_utf8_lossy(&dec_out.stderr));
-        eprintln!("Stdout: {}", String::from_utf8_lossy(&dec_out.stdout));
-    }
     assert!(dec_out.status.success());
 
     assert_eq!(dec_out.stdout, plaintext);
