@@ -4,13 +4,20 @@ use std::path::Path;
 
 pub fn derive_recipient(seed: &Seed, realm: &str) -> String {
     let raw = seed.derive_32(realm, "age");
+    eprintln!("DEBUG: Raw age key first 8 bytes: {:?}", &raw[..8]);
     let secret = x25519_dalek::StaticSecret::from(*raw);
     let public = x25519_dalek::PublicKey::from(&secret);
+    eprintln!(
+        "DEBUG: Public key bytes first 8: {:?}",
+        &public.as_bytes()[..8]
+    );
 
     // encode recipient using age's format
     use bech32::{ToBase32, Variant};
     let data = public.as_bytes().to_base32();
-    bech32::encode("age", data, Variant::Bech32).expect("valid bech32")
+    let encoded = bech32::encode("age", data, Variant::Bech32).expect("valid bech32");
+    eprintln!("DEBUG: Encoded recipient: {}", encoded);
+    encoded
 }
 
 pub fn derive_identity(seed: &Seed, realm: &str) -> String {

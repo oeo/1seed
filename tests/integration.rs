@@ -76,15 +76,31 @@ fn encrypt_decrypt_roundtrip() {
     let plaintext = b"hello world";
 
     // verify determinism
-    let pub1 = ctx.cmd().arg("pub").output().unwrap();
-    let pub2 = ctx.cmd().arg("pub").output().unwrap();
+    let pub1 = ctx
+        .cmd()
+        .arg("pub")
+        .stderr(Stdio::piped())
+        .output()
+        .unwrap();
+    eprintln!("Pub1 stderr:\n{}", String::from_utf8_lossy(&pub1.stderr));
+    let pub2 = ctx
+        .cmd()
+        .arg("pub")
+        .stderr(Stdio::piped())
+        .output()
+        .unwrap();
+    eprintln!("Pub2 stderr:\n{}", String::from_utf8_lossy(&pub2.stderr));
+    eprintln!(
+        "Public key 1: {}",
+        String::from_utf8_lossy(&pub1.stdout).trim()
+    );
+    eprintln!(
+        "Public key 2: {}",
+        String::from_utf8_lossy(&pub2.stdout).trim()
+    );
     assert_eq!(
         pub1.stdout, pub2.stdout,
         "Public keys should be deterministic"
-    );
-    eprintln!(
-        "Recipient: {}",
-        String::from_utf8_lossy(&pub1.stdout).trim()
     );
 
     // encrypt
