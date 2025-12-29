@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use crate::config::Config;
 use crate::seed::Seed;
-use crate::{age, derive, password, sign, ssh};
+use crate::{age, derive, password, sign, ssh, update};
 
 #[derive(Parser)]
 #[command(name = "1seed")]
@@ -60,8 +60,14 @@ pub enum Commands {
         action: DeriveAction,
     },
 
-    /// Show configuration and derived keys
-    Info,
+    /// Show status, configuration sources, and derived keys
+    Status,
+
+    /// Update to latest release from GitHub
+    Update {
+        #[arg(long)]
+        check: bool,
+    },
 
     /// Set configuration value
     Set { key: String, value: String },
@@ -452,6 +458,10 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             }
         },
 
+        Commands::Update { check } => {
+            update::update(check)?;
+        }
+
         Commands::Set { key, value } => {
             let mut config = Config::load().unwrap_or_default();
             match key.as_str() {
@@ -479,46 +489,107 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
-        Commands::Info => {
+        Commands::Status => {
             let config = Config::load().unwrap_or_default();
+            let env_realm = std::env::var("SEED_REALM").ok();
+            let env_seed_file = std::env::var("SEED_FILE").ok();
 
             println!("1seed {}", env!("CARGO_PKG_VERSION"));
             println!();
-            println!("config: {}", Config::path()?.display());
 
-            if let Some(f) = &config.seed_file {
-                let status = if f.exists() { "found" } else { "missing" };
-                println!("seed:   {} ({status})", f.display());
+            println!("Configuration (priority: flag > env > config > default)");
+
+            let realm_source = if cli.realm.is_some() && env_realm.is_none() {
+                "flag"
+            } else if env_realm.is_some() {
+                "env"
+            } else if config.realm.is_some() {
+                "config"
             } else {
-                println!("seed:   (prompt for passphrase)");
+                "default"
+            };
+            println!("  realm:     {:<20} [{}]", realm, realm_source);
+
+            if let Some(seed_path) = cli.get_seed_file() {
+                let seed_source = if cli.seed_file.is_some() && env_seed_file.is_none() {
+                    "flag"
+                } else if env_seed_file.is_some() {
+                    "env"
+                } else {
+                    "config"
+                };
+                let status = if seed_path.exists() {
+                    "found"
+                } else {
+                    "missing"
+                };
+                println!(
+                    "  seed-file: {:<20} [{}] ({})",
+                    seed_path.display(),
+                    seed_source,
+                    status
+                );
+            } else {
+                println!("  seed-file: {:<20} [default] (prompt)", "(none)");
             }
 
-            println!("realm:  {realm}");
+            println!();
+            println!("Environment Variables");
+            println!(
+                "  SEED_REALM: {}",
+                env_realm.as_deref().unwrap_or("(not set)")
+            );
+            println!(
+                "  SEED_FILE:  {}",
+                env_seed_file.as_deref().unwrap_or("(not set)")
+            );
 
-            if config
-                .seed_file
-                .as_ref()
-                .map(|f| f.exists())
-                .unwrap_or(true)
-            {
-                if let Ok(seed) = get_seed(&cli) {
-                    println!();
-                    println!("keys:");
-                    println!("  age:  {}", age::derive_recipient(&seed, &realm));
-
-                    let ssh_pub = ssh::derive_public(&seed, &realm);
-                    let parts: Vec<&str> = ssh_pub.split_whitespace().collect();
-                    if parts.len() >= 2 {
-                        let key_preview = if parts[1].len() > 20 {
-                            format!("{}...", &parts[1][..20])
+            println!();
+            match Config::path() {
+                Ok(path) => {
+                    if path.exists() {
+                        println!("Config File: {} (exists)", path.display());
+                        if let Some(r) = &config.realm {
+                            println!("  realm:     {}", r);
                         } else {
-                            parts[1].to_string()
-                        };
-                        println!("  ssh:  {} {key_preview}", parts[0]);
+                            println!("  realm:     (not set)");
+                        }
+                        if let Some(f) = &config.seed_file {
+                            println!("  seed-file: {}", f.display());
+                        } else {
+                            println!("  seed-file: (not set)");
+                        }
+                    } else {
+                        println!("Config File: {} (not found)", path.display());
                     }
-
-                    println!("  sign: {}", sign::derive_public(&seed, &realm));
                 }
+                Err(e) => {
+                    println!("Config File: (error: {})", e);
+                }
+            }
+
+            if let Ok(seed) = get_seed(&cli) {
+                println!();
+                println!("Derived Keys (realm: {})", realm);
+                println!("  age:  {}", age::derive_recipient(&seed, &realm));
+
+                let ssh_pub = ssh::derive_public(&seed, &realm);
+                let parts: Vec<&str> = ssh_pub.split_whitespace().collect();
+                if parts.len() >= 2 {
+                    let key_preview = if parts[1].len() > 20 {
+                        format!("{}...", &parts[1][..20])
+                    } else {
+                        parts[1].to_string()
+                    };
+                    println!("  ssh:  {} {key_preview}", parts[0]);
+                }
+
+                println!("  sign: {}", sign::derive_public(&seed, &realm));
+            }
+
+            if let Ok(binary) = std::env::current_exe() {
+                println!();
+                println!("Binary: {}", binary.display());
             }
         }
     }

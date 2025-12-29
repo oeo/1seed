@@ -12,10 +12,8 @@ pub struct Config {
 
 impl Config {
     pub fn path() -> Result<PathBuf, Box<dyn std::error::Error>> {
-        let config_dir = dirs::config_dir()
-            .ok_or("could not determine config directory")?
-            .join("1seed");
-        Ok(config_dir.join("config.toml"))
+        let home = dirs::home_dir().ok_or("could not determine home directory")?;
+        Ok(home.join(".1seed").join("config.toml"))
     }
 
     pub fn load() -> Result<Self, Box<dyn std::error::Error>> {

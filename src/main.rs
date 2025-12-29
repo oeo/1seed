@@ -6,6 +6,7 @@ mod password;
 mod seed;
 mod sign;
 mod ssh;
+mod update;
 
 use std::process::ExitCode;
 

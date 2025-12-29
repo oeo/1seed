@@ -141,10 +141,12 @@ Default: encrypt to self, decrypt with derived key.
   -w, --words N           Word count: 12/15/18/21/24 (default: 24)
 ```
 
-### Configuration
+### Management
 
 ```
-1seed info          Show config and derived keys
+1seed status        Show configuration sources and derived keys
+1seed update        Update to latest release from GitHub
+  --check           Check for updates without installing
 1seed set KEY VALUE Set config value (realm, seed-file)
 1seed get KEY       Get config value
 ```
@@ -245,14 +247,18 @@ SEED_FILE    Path to seed file
 SEED_REALM   Default realm
 ```
 
-## Files
+## Configuration
 
-Configuration file location (use `1seed config path` to see yours):
+Config file location: `~/.1seed/config.toml` (optional)
+
+Priority: `--flag` > `$ENV_VAR` > `config.toml` > `default`
+
+```toml
+realm = "personal"
+seed-file = "/Users/you/.seed"
 ```
-Linux:   ~/.config/1seed/config.toml
-macOS:   ~/Library/Application Support/1seed/config.toml
-Windows: %APPDATA%\1seed\config.toml
-```
+
+Use `1seed status` to see which values are active and their sources.
 
 ## License
 
