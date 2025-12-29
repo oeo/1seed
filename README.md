@@ -31,6 +31,12 @@ Deterministic cryptographic keys from a single seed.
 curl -fsSL https://raw.githubusercontent.com/oeo/1seed/master/install.sh | bash
 ```
 
+### From crates.io
+
+```bash
+cargo install oneseed
+```
+
 ### From Source
 
 ```bash
