@@ -5,27 +5,21 @@ use std::path::Path;
 pub fn derive_recipient(seed: &Seed, realm: &str) -> String {
     let raw = seed.derive_32(realm, "age");
     let secret = x25519_dalek::StaticSecret::from(*raw);
-
-    // encode using age's bech32 format for recipients
-    use bech32::{ToBase32, Variant};
     let public = x25519_dalek::PublicKey::from(&secret);
-    let encoded = bech32::encode("age", public.as_bytes().to_base32(), Variant::Bech32)
-        .expect("valid bech32");
-    encoded
+
+    // encode recipient using age's format
+    use bech32::{ToBase32, Variant};
+    let data = public.as_bytes().to_base32();
+    bech32::encode("age", data, Variant::Bech32).expect("valid bech32")
 }
 
 pub fn derive_identity(seed: &Seed, realm: &str) -> String {
     let raw = seed.derive_32(realm, "age");
-    let secret = x25519_dalek::StaticSecret::from(*raw);
 
-    // encode using age's bech32 format for identities
+    // encode identity using age's format
     use bech32::{ToBase32, Variant};
-    let encoded = bech32::encode(
-        "age-secret-key-",
-        secret.to_bytes().to_base32(),
-        Variant::Bech32,
-    )
-    .expect("valid bech32");
+    let data = raw.to_base32();
+    let encoded = bech32::encode("age-secret-key-", data, Variant::Bech32).expect("valid bech32");
     encoded.to_uppercase()
 }
 

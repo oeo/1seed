@@ -4,12 +4,6 @@ use sha2::Sha256;
 use std::path::Path;
 use zeroize::{Zeroize, Zeroizing};
 
-// production: N=20 (~1GB RAM, ~1 sec), tests: N=12 (~4MB RAM, ~10ms)
-#[cfg(not(test))]
-const SCRYPT_N: u8 = 20;
-#[cfg(test)]
-const SCRYPT_N: u8 = 12;
-
 const SCRYPT_R: u32 = 8;
 const SCRYPT_P: u32 = 1;
 const VERSION: &str = "v1";
@@ -20,7 +14,14 @@ pub struct Seed {
 
 impl Seed {
     pub fn from_passphrase(passphrase: &str) -> Result<Self, Box<dyn std::error::Error>> {
-        let params = Params::new(SCRYPT_N, SCRYPT_R, SCRYPT_P, 32)?;
+        // production: N=20 (~1GB RAM, ~1 sec)
+        // testing: N=12 (~4MB RAM, ~10ms) via ONESEED_TEST_MODE=1
+        let scrypt_n = if std::env::var("ONESEED_TEST_MODE").is_ok() {
+            12
+        } else {
+            20
+        };
+        let params = Params::new(scrypt_n, SCRYPT_R, SCRYPT_P, 32)?;
         let mut master = Zeroizing::new([0u8; 32]);
         scrypt(passphrase.as_bytes(), b"1seed", &params, master.as_mut())?;
         Ok(Self { master })

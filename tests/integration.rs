@@ -3,7 +3,9 @@ use std::process::{Command, Stdio};
 use tempfile::TempDir;
 
 fn seed_cmd() -> Command {
-    Command::new(env!("CARGO_BIN_EXE_1seed"))
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_1seed"));
+    cmd.env("ONESEED_TEST_MODE", "1");
+    cmd
 }
 
 fn setup_seed() -> TempDir {
