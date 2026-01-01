@@ -2,7 +2,7 @@ use hkdf::Hkdf;
 use keyring::Entry;
 use scrypt::{scrypt, Params};
 use sha2::Sha256;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use zeroize::{Zeroize, Zeroizing};
 
 const SCRYPT_R: u32 = 8;
@@ -13,10 +13,21 @@ pub struct Seed {
     master: Zeroizing<[u8; 32]>,
 }
 
+pub enum SeedSource {
+    EnvFile(PathBuf),
+    Keyring,
+    DefaultFile(PathBuf),
+    Passphrase,
+}
+
 impl Seed {
+    fn default_file_path() -> PathBuf {
+        dirs::home_dir()
+            .unwrap_or_else(|| PathBuf::from("."))
+            .join(".1seed")
+    }
+
     pub fn from_passphrase(passphrase: &str) -> Result<Self, Box<dyn std::error::Error>> {
-        // production: N=20 (~1GB RAM, ~1 sec)
-        // testing: N=12 (~4MB RAM, ~10ms) via ONESEED_TEST_MODE=1
         let scrypt_n = if std::env::var("ONESEED_TEST_MODE").is_ok() {
             12
         } else {
@@ -28,77 +39,124 @@ impl Seed {
         Ok(Self { master })
     }
 
+    fn from_bytes(bytes: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
+        if bytes.len() >= 32 && bytes.iter().any(|&b| !(32..=127).contains(&b)) {
+            let mut master = Zeroizing::new([0u8; 32]);
+            master.copy_from_slice(&bytes[..32]);
+            Ok(Self { master })
+        } else {
+            let passphrase = String::from_utf8_lossy(bytes);
+            let passphrase = passphrase.trim();
+            Self::from_passphrase(passphrase)
+        }
+    }
+
     pub fn from_file(path: &Path) -> Result<Self, Box<dyn std::error::Error>> {
         let bytes = std::fs::read(path)?;
-
-        if bytes.len() >= 32 && bytes.iter().any(|&b| !(32..=127).contains(&b)) {
-            // looks like binary data, use first 32 bytes
-            let mut master = Zeroizing::new([0u8; 32]);
-            master.copy_from_slice(&bytes[..32]);
-            Ok(Self { master })
-        } else {
-            // treat as passphrase
-            let passphrase = String::from_utf8_lossy(&bytes);
-            let passphrase = passphrase.trim();
-            Self::from_passphrase(passphrase)
-        }
+        Self::from_bytes(&bytes)
     }
 
-    pub fn from_keyring() -> Result<Self, Box<dyn std::error::Error>> {
-        if std::env::var("DEBUG").is_ok() {
-            eprintln!("debug: attempting to read from keyring");
-            eprintln!("debug: service='1seed', account='master-seed'");
+    pub fn load() -> Result<(Self, SeedSource), Box<dyn std::error::Error>> {
+        if let Ok(path_str) = std::env::var("SEED_FILE") {
+            let path = PathBuf::from(path_str);
+            return Ok((Self::from_file(&path)?, SeedSource::EnvFile(path)));
         }
 
+        let use_file_only = std::env::var("SEED_NO_KEYRING").is_ok();
+
+        if !use_file_only {
+            if let Ok(seed) = Self::from_keyring() {
+                return Ok((seed, SeedSource::Keyring));
+            }
+        }
+
+        let default_file = Self::default_file_path();
+        if default_file.exists() {
+            return Ok((
+                Self::from_file(&default_file)?,
+                SeedSource::DefaultFile(default_file),
+            ));
+        }
+
+        Err("no seed found, run '1seed init --generate'".into())
+    }
+
+    fn from_keyring() -> Result<Self, Box<dyn std::error::Error>> {
         let entry = Entry::new("1seed", "master-seed")?;
         let bytes = entry.get_secret()?;
+        Self::from_bytes(&bytes)
+    }
 
-        if std::env::var("DEBUG").is_ok() {
-            eprintln!(
-                "debug: successfully read {} bytes from keyring",
-                bytes.len()
-            );
-        }
+    pub fn store(data: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
+        let use_file_only = std::env::var("SEED_NO_KEYRING").is_ok();
 
-        if bytes.len() >= 32 && bytes.iter().any(|&b| !(32..=127).contains(&b)) {
-            // binary seed (32 bytes)
-            if bytes.len() < 32 {
-                return Err("seed in keyring is too short (need at least 32 bytes)".into());
+        if use_file_only {
+            let path = Self::default_file_path();
+            std::fs::write(&path, data)?;
+            #[cfg(unix)]
+            {
+                use std::fs::Permissions;
+                use std::os::unix::fs::PermissionsExt;
+                std::fs::set_permissions(&path, Permissions::from_mode(0o600))?;
             }
-            let mut master = Zeroizing::new([0u8; 32]);
-            master.copy_from_slice(&bytes[..32]);
-            Ok(Self { master })
+            return Ok(());
+        }
+
+        match Entry::new("1seed", "master-seed").and_then(|e| e.set_secret(data)) {
+            Ok(()) => Ok(()),
+            Err(_) => {
+                let path = Self::default_file_path();
+                std::fs::write(&path, data)?;
+                #[cfg(unix)]
+                {
+                    use std::fs::Permissions;
+                    use std::os::unix::fs::PermissionsExt;
+                    std::fs::set_permissions(&path, Permissions::from_mode(0o600))?;
+                }
+                Ok(())
+            }
+        }
+    }
+
+    pub fn remove() -> Result<(), Box<dyn std::error::Error>> {
+        let mut removed_any = false;
+
+        if let Ok(entry) = Entry::new("1seed", "master-seed") {
+            if entry.delete_credential().is_ok() {
+                removed_any = true;
+            }
+        }
+
+        let default_file = Self::default_file_path();
+        if default_file.exists() {
+            std::fs::remove_file(&default_file)?;
+            removed_any = true;
+        }
+
+        if removed_any {
+            Ok(())
         } else {
-            // passphrase stored in keyring
-            let passphrase = String::from_utf8_lossy(&bytes);
-            let passphrase = passphrase.trim();
-            Self::from_passphrase(passphrase)
+            Err("no seed found to remove".into())
         }
     }
 
-    pub fn store_in_keyring(data: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
-        let entry = Entry::new("1seed", "master-seed")?;
-        entry.set_secret(data)?;
-
-        // debug: verify entry was created
-        if std::env::var("DEBUG").is_ok() {
-            eprintln!("debug: stored {} bytes to keyring", data.len());
-            eprintln!("debug: service='1seed', account='master-seed'");
+    pub fn exists() -> bool {
+        if std::env::var("SEED_FILE").is_ok() {
+            return true;
         }
 
-        Ok(())
-    }
+        let use_file_only = std::env::var("SEED_NO_KEYRING").is_ok();
 
-    pub fn remove_from_keyring() -> Result<(), Box<dyn std::error::Error>> {
-        let entry = Entry::new("1seed", "master-seed")?;
-        entry.delete_credential()?;
-        Ok(())
-    }
+        if !use_file_only {
+            if Entry::new("1seed", "master-seed")
+                .and_then(|e| e.get_secret())
+                .is_ok()
+            {
+                return true;
+            }
+        }
 
-    pub fn keyring_exists() -> bool {
-        Entry::new("1seed", "master-seed")
-            .and_then(|e| e.get_secret())
-            .is_ok()
+        Self::default_file_path().exists()
     }
 
     pub fn derive(&self, realm: &str, key_type: &str, length: usize) -> Zeroizing<Vec<u8>> {

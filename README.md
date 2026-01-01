@@ -5,11 +5,11 @@
 [![Crates.io](https://img.shields.io/crates/v/oneseed.svg?style=for-the-badge)](https://crates.io/crates/oneseed)
 [![zread](https://img.shields.io/badge/Ask_Zread-_.svg?style=for-the-badge&color=00b0aa&labelColor=000000&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTQuOTYxNTYgMS42MDAxSDIuMjQxNTZDMS44ODgxIDEuNjAwMSAxLjYwMTU2IDEuODg2NjQgMS42MDE1NiAyLjI0MDFWNC45NjAxQzEuNjAxNTYgNS4zMTM1NiAxLjg4ODEgNS42MDAxIDIuMjQxNTYgNS42MDAxSDQuOTYxNTZDNS4zMTUwMiA1LjYwMDEgNS42MDE1NiA1LjMxMzU2IDUuNjAxNTYgNC45NjAxVjIuMjQwMUM1LjYwMTU2IDEuODg2NjQgNS4zMTUwMiAxLjYwMDEgNC45NjE1NiAxLjYwMDFaIiBmaWxsPSIjZmZmIi8%2BCjxwYXRoIGQ9Ik00Ljk2MTU2IDEwLjM5OTlIMi4yNDE1NkMxLjg4ODEgMTAuMzk5OSAxLjYwMTU2IDEwLjY4NjQgMS42MDE1NiAxMS4wMzk5VjEzLjc1OTlDMS42MDE1NiAxNC4xMTM0IDEuODg4MSAxNC4zOTk5IDIuMjQxNTYgMTQuMzk5OUg0Ljk2MTU2QzUuMzE1MDIgMTQuMzk5OSA1LjYwMTU2IDE0LjExMzQgNS42MDE1NiAxMy43NTk5VjExLjAzOTlDNS42MDE1NiAxMC42ODY0IDUuMzE1MDIgMTAuMzk5OSA0Ljk2MTU2IDEwLjM5OTlaIiBmaWxsPSIjZmZmIi8%2BCjxwYXRoIGQ9Ik0xMy43NTg0IDEuNjAwMUgxMS4wMzg0QzEwLjY4NSAxLjYwMDEgMTAuMzk4NCAxLjg4NjY0IDEwLjM5ODQgMi4yNDAxVjQuOTYwMUMxMC4zOTg0IDUuMzEzNTYgMTAuNjg1IDUuNjAwMSAxMS4wMzg0IDUuNjAwMUgxMy43NTg0QzE0LjExMTkgNS42MDAxIDE0LjM5ODQgNS4zMTM1NiAxNC4zOTg0IDQuOTYwMVYyLjI0MDFDMTQuMzk4NCAxLjg4NjY0IDE0LjExMTkgMS42MDAxIDEzLjc1ODQgMS42MDAxWiIgZmlsbD0iI2ZmZiIvPgo8cGF0aCBkPSJNNCAxMkwxMiA0TDQgMTJaIiBmaWxsPSIjZmZmIi8%2BCjxwYXRoIGQ9Ik00IDEyTDEyIDQiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgo8L3N2Zz4K&logoColor=ffffff)](https://zread.ai/oeo/1seed)
 
-Deterministic cryptographic keys from a single seed, stored securely in your OS keychain.
+Deterministic cryptographic keys from a single seed.
 
 ## What This Does
 
-- Stores seed securely in OS-native credential stores (no plaintext files)
+- Stores seed securely in OS keychain with automatic fallback to ~/.1seed
 - Derives age, SSH, and signing keys from one master secret
 - Encrypts and decrypts files using age
 - Signs and verifies data using Ed25519
@@ -76,16 +76,26 @@ echo "secret" | 1seed age encrypt > secret.age
 
 ## Seed Storage
 
-Seeds are stored in OS-native credential stores:
+**Priority**: `SEED_FILE` env → OS keyring → `~/.1seed` → error
+
+Seeds are stored in OS-native credential stores when available:
 - **macOS**: Keychain.app
 - **Linux**: Secret Service (GNOME Keyring / KWallet)
 - **Windows**: Credential Manager
 
-The OS prompts for approval on first access per application.
+If keyring is unavailable (headless servers, minimal installs), 1seed automatically falls back to `~/.1seed` (mode 0600).
 
-For testing/automation, override with `SEED_FILE` environment variable:
+### Environment Variables
+
 ```bash
+# Use specific file (bypasses keyring and ~/.1seed)
 SEED_FILE=/path/to/seed 1seed age pub
+
+# Force file-only storage (bypass keyring)
+SEED_NO_KEYRING=1 1seed init --generate
+
+# Set default realm
+export SEED_REALM=work
 ```
 
 ## Commands
@@ -93,13 +103,13 @@ SEED_FILE=/path/to/seed 1seed age pub
 ### Initialization
 
 ```
-1seed init [OPTIONS]          Store seed in OS keychain
+1seed init [OPTIONS]          Store seed (keyring or ~/.1seed)
   -g, --generate              Generate random 32 bytes (recommended)
   -p, --passphrase            Use memorable passphrase
   --from-file PATH            Import from existing file
 
-1seed forget --confirm        Remove seed from keychain
-1seed status                  Show seed storage state and derived keys
+1seed forget --confirm        Remove seed from all storage
+1seed status                  Show seed location and derived keys
 ```
 
 ### Age Encryption
@@ -201,37 +211,23 @@ Same site, different counter = different password.
 Your backup is the seed itself. Export it securely:
 
 ```bash
-# Option 1: Export to encrypted file
-1seed init --generate
-# Your seed is now in OS keychain. To backup:
-# On macOS: Open Keychain.app, search "1seed", export
-# On Linux: Use secret-tool or seahorse
-# On Windows: Use Credential Manager
+# Option 1: From keyring
+# macOS: Keychain.app → search "1seed" → export
+# Linux: secret-tool lookup service 1seed account master-seed
+# Windows: Credential Manager → search "1seed"
 
-# Option 2: Use a memorable passphrase you can write down
+# Option 2: From file (if using ~/.1seed)
+cat ~/.1seed > backup.seed
+chmod 600 backup.seed
+
+# Option 3: Use a memorable passphrase
 1seed init --passphrase
-# Write down the passphrase in a secure location
+# Write down the passphrase securely
 ```
 
 From the seed, everything derives deterministically:
 - Same seed + same realm = same keys (always)
 - Different seeds or realms = different keys (always)
-
-## Migration from File-Based Storage
-
-If you were using v0.2.0 or earlier with file-based storage:
-
-```bash
-# Store your existing seed in keychain
-1seed init --from-file ~/.seed
-
-# Verify it works
-1seed status
-
-# Securely delete the old file
-shred -u ~/.seed  # Linux
-rm -P ~/.seed     # macOS
-```
 
 ## Security Notes
 
@@ -280,16 +276,10 @@ EOF
 ssh user@machine-a  # works
 ```
 
-## Environment Variables
-
-```
-SEED_FILE    Override keychain, use file instead (for testing/automation)
-SEED_REALM   Default realm (default: "default")
-```
-
 ## Version History
 
-**v0.4.0** (BREAKING): Keyring-only storage, removed config file
+**v0.5.0**: Auto-fallback to ~/.1seed, SEED_NO_KEYRING env var
+**v0.4.0**: Keyring-only storage, removed config file
 **v0.3.0**: Self-update command, simplified config
 **v0.2.0**: Domain-based namespaces (`age`, `ssh`, `sign`, `derive`)
 **v0.1.0**: Initial release
