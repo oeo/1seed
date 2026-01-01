@@ -1,6 +1,5 @@
 mod age;
 mod cli;
-mod config;
 mod derive;
 mod password;
 mod seed;

@@ -2,7 +2,6 @@ use clap::{Parser, Subcommand};
 use std::io::Write;
 use std::path::PathBuf;
 
-use crate::config::Config;
 use crate::seed::Seed;
 use crate::{age, derive, password, sign, ssh, update};
 
@@ -14,21 +13,25 @@ use crate::{age, derive, password, sign, ssh, update};
     about = "Deterministic cryptographic keys from a single seed"
 )]
 #[command(after_help = "EXAMPLES:
+    1seed init                       Store seed in OS keychain
     1seed age pub                    Show age public key
     1seed --realm work ssh add       Add work SSH key to agent
     echo secret | 1seed age encrypt  Encrypt to self
     1seed derive password github.com Derive password
 
 ENVIRONMENT:
-    SEED_FILE    Path to seed file
+    SEED_FILE    Override keychain, use file instead (for testing/automation)
     SEED_REALM   Default realm (default: \"default\")
+
+STORAGE:
+    Seeds are stored in your OS keychain:
+    - macOS: Keychain
+    - Linux: Secret Service (GNOME Keyring / KWallet)
+    - Windows: Credential Manager
 ")]
 pub struct Cli {
     #[arg(long, global = true, env = "SEED_REALM")]
     pub realm: Option<String>,
-
-    #[arg(short = 'f', long, global = true, env = "SEED_FILE")]
-    pub seed_file: Option<PathBuf>,
 
     #[command(subcommand)]
     pub command: Commands,
@@ -60,7 +63,25 @@ pub enum Commands {
         action: DeriveAction,
     },
 
-    /// Show status, configuration sources, and derived keys
+    /// Initialize: store seed in OS keychain
+    Init {
+        #[arg(short, long)]
+        passphrase: bool,
+
+        #[arg(short, long)]
+        generate: bool,
+
+        #[arg(long)]
+        from_file: Option<PathBuf>,
+    },
+
+    /// Remove seed from OS keychain
+    Forget {
+        #[arg(long)]
+        confirm: bool,
+    },
+
+    /// Show status and derived keys
     Status,
 
     /// Update to latest release from GitHub
@@ -68,12 +89,6 @@ pub enum Commands {
         #[arg(long)]
         check: bool,
     },
-
-    /// Set configuration value
-    Set { key: String, value: String },
-
-    /// Get configuration value
-    Get { key: String },
 }
 
 #[derive(Subcommand)]
@@ -213,36 +228,31 @@ pub enum DeriveAction {
 
 impl Cli {
     pub fn get_realm(&self) -> String {
-        if let Some(ref r) = self.realm {
-            return r.clone();
-        }
-        if let Ok(config) = Config::load() {
-            if let Some(r) = config.realm {
-                return r;
-            }
-        }
-        "default".to_string()
-    }
-
-    pub fn get_seed_file(&self) -> Option<PathBuf> {
-        if let Some(ref f) = self.seed_file {
-            return Some(f.clone());
-        }
-        if let Ok(config) = Config::load() {
-            return config.seed_file;
-        }
-        None
+        self.realm.clone().unwrap_or_else(|| "default".to_string())
     }
 }
 
-fn get_seed(cli: &Cli) -> Result<Seed, Box<dyn std::error::Error>> {
-    if let Some(path) = cli.get_seed_file() {
-        Seed::from_file(&path)
-    } else {
-        eprint!("passphrase: ");
-        std::io::stderr().flush()?;
-        let passphrase = rpassword::read_password()?;
-        Seed::from_passphrase(&passphrase)
+fn get_seed(_cli: &Cli) -> Result<Seed, Box<dyn std::error::Error>> {
+    // check for SEED_FILE env override (for testing/automation)
+    if let Ok(path_str) = std::env::var("SEED_FILE") {
+        let path = PathBuf::from(path_str);
+        return Seed::from_file(&path);
+    }
+
+    // try keyring first
+    match Seed::from_keyring() {
+        Ok(seed) => Ok(seed),
+        Err(e) => {
+            // keyring failed, prompt for passphrase
+            // (don't print error during normal passphrase prompt)
+            if std::env::var("DEBUG").is_ok() {
+                eprintln!("debug: keyring access failed: {}", e);
+            }
+            eprint!("passphrase: ");
+            std::io::stderr().flush()?;
+            let passphrase = rpassword::read_password()?;
+            Seed::from_passphrase(&passphrase)
+        }
     }
 }
 
@@ -458,80 +468,107 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             }
         },
 
+        Commands::Init {
+            passphrase,
+            generate,
+            from_file,
+        } => {
+            if Seed::keyring_exists() {
+                eprintln!("Seed already exists in keyring");
+                eprintln!("Run '1seed forget --confirm' first to remove it");
+                std::process::exit(1);
+            }
+
+            let seed_data = if generate {
+                // generate random 32 bytes
+                let mut bytes = [0u8; 32];
+                use std::fs::File;
+                use std::io::Read;
+                File::open("/dev/urandom")?.read_exact(&mut bytes)?;
+                eprintln!("Generated 32-byte random seed");
+                bytes.to_vec()
+            } else if let Some(path) = from_file {
+                // read from file
+                let bytes = std::fs::read(path)?;
+                eprintln!("Read {} bytes from file", bytes.len());
+                bytes
+            } else if passphrase {
+                // prompt for passphrase
+                eprint!("Enter passphrase: ");
+                std::io::stderr().flush()?;
+                let pass = rpassword::read_password()?;
+                eprint!("Confirm passphrase: ");
+                std::io::stderr().flush()?;
+                let confirm = rpassword::read_password()?;
+                if pass != confirm {
+                    return Err("passphrases do not match".into());
+                }
+                pass.into_bytes()
+            } else {
+                return Err(
+                    "must specify --passphrase, --generate, or --from-file".into()
+                );
+            };
+
+            Seed::store_in_keyring(&seed_data)?;
+
+            // verify we can read it back (triggers permission dialog on first access)
+            match Seed::from_keyring() {
+                Ok(_) => {
+                    eprintln!("✓ Seed stored in OS keychain and verified");
+                    eprintln!("  Run '1seed status' to see derived keys");
+                }
+                Err(e) => {
+                    eprintln!("⚠ Seed stored, but verification failed");
+                    eprintln!("  Error: {}", e);
+                    eprintln!();
+                    eprintln!("  macOS: Grant keychain access when prompted by system dialog");
+                    eprintln!("  Linux: Check Secret Service daemon is running");
+                    eprintln!("  Windows: Check Credential Manager permissions");
+                    eprintln!();
+                    eprintln!("  Try: 1seed status");
+                    std::process::exit(1);
+                }
+            }
+        }
+
+        Commands::Forget { confirm } => {
+            if !confirm {
+                eprintln!("This will remove your seed from the keychain");
+                eprintln!("You will lose access to all derived keys");
+                eprintln!();
+                eprintln!("Run with --confirm to proceed:");
+                eprintln!("  1seed forget --confirm");
+                std::process::exit(1);
+            }
+
+            match Seed::remove_from_keyring() {
+                Ok(()) => eprintln!("✓ Seed removed from keychain"),
+                Err(e) => eprintln!("Failed to remove seed: {}", e),
+            }
+        }
+
         Commands::Update { check } => {
             update::update(check)?;
         }
 
-        Commands::Set { key, value } => {
-            let mut config = Config::load().unwrap_or_default();
-            match key.as_str() {
-                "realm" => config.realm = Some(value),
-                "seed-file" => config.seed_file = Some(PathBuf::from(value)),
-                _ => return Err(format!("unknown key: {key}").into()),
-            }
-            config.save()?;
-        }
-
-        Commands::Get { key } => {
-            let config = Config::load()?;
-            match key.as_str() {
-                "realm" => {
-                    if let Some(v) = config.realm {
-                        println!("{v}");
-                    }
-                }
-                "seed-file" => {
-                    if let Some(v) = config.seed_file {
-                        println!("{}", v.display());
-                    }
-                }
-                _ => return Err(format!("unknown key: {key}").into()),
-            }
-        }
-
         Commands::Status => {
-            let config = Config::load().unwrap_or_default();
             let env_realm = std::env::var("SEED_REALM").ok();
             let env_seed_file = std::env::var("SEED_FILE").ok();
 
             println!("1seed {}", env!("CARGO_PKG_VERSION"));
             println!();
 
-            println!("Configuration (priority: flag > env > config > default)");
+            println!("Configuration");
 
             let realm_source = if cli.realm.is_some() && env_realm.is_none() {
                 "flag"
             } else if env_realm.is_some() {
                 "env"
-            } else if config.realm.is_some() {
-                "config"
             } else {
                 "default"
             };
-            println!("  realm:     {:<20} [{}]", realm, realm_source);
-
-            if let Some(seed_path) = cli.get_seed_file() {
-                let seed_source = if cli.seed_file.is_some() && env_seed_file.is_none() {
-                    "flag"
-                } else if env_seed_file.is_some() {
-                    "env"
-                } else {
-                    "config"
-                };
-                let status = if seed_path.exists() {
-                    "found"
-                } else {
-                    "missing"
-                };
-                println!(
-                    "  seed-file: {:<20} [{}] ({})",
-                    seed_path.display(),
-                    seed_source,
-                    status
-                );
-            } else {
-                println!("  seed-file: {:<20} [default] (prompt)", "(none)");
-            }
+            println!("  realm: {} [{}]", realm, realm_source);
 
             println!();
             println!("Environment Variables");
@@ -545,46 +582,61 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             );
 
             println!();
-            match Config::path() {
-                Ok(path) => {
-                    if path.exists() {
-                        println!("Config File: {} (exists)", path.display());
-                        if let Some(r) = &config.realm {
-                            println!("  realm:     {}", r);
-                        } else {
-                            println!("  realm:     (not set)");
-                        }
-                        if let Some(f) = &config.seed_file {
-                            println!("  seed-file: {}", f.display());
-                        } else {
-                            println!("  seed-file: (not set)");
-                        }
+            println!("Seed Storage");
+
+            // try to get seed to determine actual source
+            match get_seed(&cli) {
+                Ok(seed) => {
+                    // successfully got seed, determine how
+                    if env_seed_file.is_some() {
+                        println!("  source: SEED_FILE env override");
                     } else {
-                        println!("Config File: {} (not found)", path.display());
+                        // if SEED_FILE is not set and we got a seed,
+                        // it came from keyring (or user just entered passphrase)
+                        // check if it's in keyring by attempting direct access
+                        if Seed::from_keyring().is_ok() {
+                            println!("  source: OS keychain");
+                            println!("  macOS:   Keychain.app → Search '1seed'");
+                            println!("  Linux:   Secret Service (GNOME Keyring / KWallet)");
+                            println!("  Windows: Credential Manager");
+                        } else {
+                            println!("  source: entered passphrase (not stored)");
+                            println!();
+                            println!("  To store seed in keychain:");
+                            println!("    1seed forget --confirm  # clear any partial state");
+                            println!("    1seed init --passphrase # store new seed");
+                        }
+                    }
+
+                    println!();
+                    println!("Derived Keys (realm: {})", realm);
+                    println!("  age:  {}", age::derive_recipient(&seed, &realm));
+
+                    let ssh_pub = ssh::derive_public(&seed, &realm);
+                    let parts: Vec<&str> = ssh_pub.split_whitespace().collect();
+                    if parts.len() >= 2 {
+                        let key_preview = if parts[1].len() > 20 {
+                            format!("{}...", &parts[1][..20])
+                        } else {
+                            parts[1].to_string()
+                        };
+                        println!("  ssh:  {} {key_preview}", parts[0]);
+                    }
+
+                    println!("  sign: {}", sign::derive_public(&seed, &realm));
+                }
+                Err(_) => {
+                    if env_seed_file.is_some() {
+                        println!("  source: SEED_FILE env override (file missing or unreadable)");
+                    } else {
+                        println!("  source: none");
+                        println!();
+                        println!("  To store a seed, run:");
+                        println!("    1seed init --generate      # random 32 bytes");
+                        println!("    1seed init --passphrase    # memorable passphrase");
+                        println!("    1seed init --from-file <path>");
                     }
                 }
-                Err(e) => {
-                    println!("Config File: (error: {})", e);
-                }
-            }
-
-            if let Ok(seed) = get_seed(&cli) {
-                println!();
-                println!("Derived Keys (realm: {})", realm);
-                println!("  age:  {}", age::derive_recipient(&seed, &realm));
-
-                let ssh_pub = ssh::derive_public(&seed, &realm);
-                let parts: Vec<&str> = ssh_pub.split_whitespace().collect();
-                if parts.len() >= 2 {
-                    let key_preview = if parts[1].len() > 20 {
-                        format!("{}...", &parts[1][..20])
-                    } else {
-                        parts[1].to_string()
-                    };
-                    println!("  ssh:  {} {key_preview}", parts[0]);
-                }
-
-                println!("  sign: {}", sign::derive_public(&seed, &realm));
             }
 
             if let Ok(binary) = std::env::current_exe() {

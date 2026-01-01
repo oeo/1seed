@@ -17,7 +17,7 @@ impl TestContext {
         // canonicalize to resolve any symlinks (important on macOS where /tmp -> /private/tmp)
         let seed_file = seed_file.canonicalize().unwrap();
 
-        // create isolated config directory to prevent tests from reading user's config
+        // create isolated config directory (not used anymore, but kept for compatibility)
         let config_dir = _dir.path().join("config");
         std::fs::create_dir_all(&config_dir).unwrap();
         let config_dir = config_dir.canonicalize().unwrap();
@@ -36,10 +36,9 @@ impl TestContext {
     fn cmd_realm(&self, realm: &str) -> Command {
         let mut cmd = Command::new(env!("CARGO_BIN_EXE_1seed"));
         cmd.env("ONESEED_TEST_MODE", "1");
-        cmd.env("XDG_CONFIG_HOME", &self.config_dir);
-        cmd.arg("-f");
-        cmd.arg(&self.seed_file);
-        // always pass explicit realm to avoid config file pollution from parallel tests
+        // use SEED_FILE env to override keyring for tests
+        cmd.env("SEED_FILE", &self.seed_file);
+        // always pass explicit realm
         cmd.arg("--realm");
         cmd.arg(realm);
         cmd
@@ -308,27 +307,3 @@ fn mnemonic_word_counts() {
     }
 }
 
-#[test]
-fn config_set_get() {
-    let ctx = TestContext::new();
-    let dir = TempDir::new().unwrap();
-    let config_dir = dir.path().join("config");
-    std::fs::create_dir_all(&config_dir).unwrap();
-
-    let out = ctx
-        .cmd()
-        .env("XDG_CONFIG_HOME", &config_dir)
-        .args(["set", "realm", "test-realm"])
-        .output()
-        .unwrap();
-    assert!(out.status.success());
-
-    let out = ctx
-        .cmd()
-        .env("XDG_CONFIG_HOME", &config_dir)
-        .args(["get", "realm"])
-        .output()
-        .unwrap();
-    assert!(out.status.success());
-    assert_eq!(String::from_utf8_lossy(&out.stdout).trim(), "test-realm");
-}

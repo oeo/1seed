@@ -1,4 +1,5 @@
 use hkdf::Hkdf;
+use keyring::Entry;
 use scrypt::{scrypt, Params};
 use sha2::Sha256;
 use std::path::Path;
@@ -41,6 +42,60 @@ impl Seed {
             let passphrase = passphrase.trim();
             Self::from_passphrase(passphrase)
         }
+    }
+
+    pub fn from_keyring() -> Result<Self, Box<dyn std::error::Error>> {
+        if std::env::var("DEBUG").is_ok() {
+            eprintln!("debug: attempting to read from keyring");
+            eprintln!("debug: service='1seed', account='master-seed'");
+        }
+
+        let entry = Entry::new("1seed", "master-seed")?;
+        let bytes = entry.get_secret()?;
+
+        if std::env::var("DEBUG").is_ok() {
+            eprintln!("debug: successfully read {} bytes from keyring", bytes.len());
+        }
+
+        if bytes.len() >= 32 && bytes.iter().any(|&b| !(32..=127).contains(&b)) {
+            // binary seed (32 bytes)
+            if bytes.len() < 32 {
+                return Err("seed in keyring is too short (need at least 32 bytes)".into());
+            }
+            let mut master = Zeroizing::new([0u8; 32]);
+            master.copy_from_slice(&bytes[..32]);
+            Ok(Self { master })
+        } else {
+            // passphrase stored in keyring
+            let passphrase = String::from_utf8_lossy(&bytes);
+            let passphrase = passphrase.trim();
+            Self::from_passphrase(passphrase)
+        }
+    }
+
+    pub fn store_in_keyring(data: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
+        let entry = Entry::new("1seed", "master-seed")?;
+        entry.set_secret(data)?;
+
+        // debug: verify entry was created
+        if std::env::var("DEBUG").is_ok() {
+            eprintln!("debug: stored {} bytes to keyring", data.len());
+            eprintln!("debug: service='1seed', account='master-seed'");
+        }
+
+        Ok(())
+    }
+
+    pub fn remove_from_keyring() -> Result<(), Box<dyn std::error::Error>> {
+        let entry = Entry::new("1seed", "master-seed")?;
+        entry.delete_credential()?;
+        Ok(())
+    }
+
+    pub fn keyring_exists() -> bool {
+        Entry::new("1seed", "master-seed")
+            .and_then(|e| e.get_secret())
+            .is_ok()
     }
 
     pub fn derive(&self, realm: &str, key_type: &str, length: usize) -> Zeroizing<Vec<u8>> {
