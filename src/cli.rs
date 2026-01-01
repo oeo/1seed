@@ -525,7 +525,6 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                         SeedSource::EnvFile(ref path) => format!("SEED_FILE: {}", path.display()),
                         SeedSource::Keyring => "keyring".to_string(),
                         SeedSource::DefaultFile(ref path) => format!("{}", path.display()),
-                        SeedSource::Passphrase => "passphrase (not stored)".to_string(),
                     };
                     println!("seed: {}", source_desc);
                     println!("keys:");

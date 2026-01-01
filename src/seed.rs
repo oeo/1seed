@@ -17,7 +17,6 @@ pub enum SeedSource {
     EnvFile(PathBuf),
     Keyring,
     DefaultFile(PathBuf),
-    Passphrase,
 }
 
 impl Seed {
@@ -147,13 +146,12 @@ impl Seed {
 
         let use_file_only = std::env::var("SEED_NO_KEYRING").is_ok();
 
-        if !use_file_only {
-            if Entry::new("1seed", "master-seed")
+        if !use_file_only
+            && Entry::new("1seed", "master-seed")
                 .and_then(|e| e.get_secret())
                 .is_ok()
-            {
-                return true;
-            }
+        {
+            return true;
         }
 
         Self::default_file_path().exists()
