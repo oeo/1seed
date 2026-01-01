@@ -279,9 +279,13 @@ ssh user@machine-a  # works
 ## Version History
 
 **v0.5.0**: Auto-fallback to ~/.1seed, SEED_NO_KEYRING env var
+
 **v0.4.0**: Keyring-only storage, removed config file
+
 **v0.3.0**: Self-update command, simplified config
+
 **v0.2.0**: Domain-based namespaces (`age`, `ssh`, `sign`, `derive`)
+
 **v0.1.0**: Initial release
 
 ## License
