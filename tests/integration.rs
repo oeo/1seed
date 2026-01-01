@@ -306,4 +306,3 @@ fn mnemonic_word_counts() {
         assert_eq!(count, words, "expected {words} words, got {count}");
     }
 }
-

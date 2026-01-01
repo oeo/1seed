@@ -54,7 +54,10 @@ impl Seed {
         let bytes = entry.get_secret()?;
 
         if std::env::var("DEBUG").is_ok() {
-            eprintln!("debug: successfully read {} bytes from keyring", bytes.len());
+            eprintln!(
+                "debug: successfully read {} bytes from keyring",
+                bytes.len()
+            );
         }
 
         if bytes.len() >= 32 && bytes.iter().any(|&b| !(32..=127).contains(&b)) {

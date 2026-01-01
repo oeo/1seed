@@ -505,9 +505,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 pass.into_bytes()
             } else {
-                return Err(
-                    "must specify --passphrase, --generate, or --from-file".into()
-                );
+                return Err("must specify --passphrase, --generate, or --from-file".into());
             };
 
             Seed::store_in_keyring(&seed_data)?;
