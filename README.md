@@ -21,6 +21,7 @@ Deterministic cryptographic keys from a single seed.
 - Store secrets (use files, encrypted with 1seed)
 - Sync secrets (use git)
 - Manage contacts (use a text file)
+- Provide cryptographic isolation between credentials
 - Replace hardware security keys for high-value assets
 - Generate TOTP codes (time-based, not derivable)
 
@@ -185,6 +186,8 @@ Default: encrypt to self, decrypt with derived key.
 
 Realms namespace all derived keys. Same seed, different realm = different keys.
 
+Realms are derivation parameters, not security boundaries. Anyone with your seed can derive all realms. Use realms for organization, not isolation.
+
 ```bash
 1seed --realm personal age pub     # Personal age key
 1seed --realm work age pub         # Work age key (different)
@@ -229,15 +232,42 @@ From the seed, everything derives deterministically:
 - Same seed + same realm = same keys (always)
 - Different seeds or realms = different keys (always)
 
-## Security Notes
+## Security Model
 
-**Keyring storage**: OS-native credential store with hardware encryption support (Secure Enclave on macOS, TPM on Windows/Linux where available).
+### Single Point of Failure
 
-**Passphrase**: If using `--passphrase`, processed through scrypt (N=2^20, r=8, p=1). Uses ~1GB RAM, takes ~1 second. Resists brute force, but use a strong passphrase (6+ random words).
+The seed is a single point of failure by design. If your seed leaks, everything derived from it is compromised. This is the fundamental tradeoff.
 
-**Memory**: Keys are zeroized when dropped.
+Like a password manager, you trade N secrets for one well-protected secret. The difference:
+- Password manager: one password protects N random secrets
+- 1seed: one seed deterministically generates N secrets
 
-**Mnemonic warning**: Deriving BIP39 phrases means your cryptocurrency keys share fate with your master seed. Consider using a dedicated realm and understand the risk.
+If the seed is compromised, you must rotate everything. You cannot rotate individual credentials independently.
+
+### When This Model Works
+
+- You trust OS keychain security (hardware-backed where available)
+- You need reproducible keys across machines without syncing state
+- You understand "one seed compromised = rotate everything"
+- Your threat model accepts trading N secrets for 1 well-protected seed
+- You're managing development credentials or personal infrastructure
+
+### When This Model Fails
+
+- You need to rotate individual credentials without rotating all
+- You need cryptographic isolation between credentials (use separate seeds)
+- You're managing production secrets at scale
+- You cannot tolerate total blast radius on compromise
+
+### Implementation Details
+
+Keyring storage uses OS-native credential stores with hardware encryption support where available (Secure Enclave on macOS, TPM on Windows/Linux).
+
+Passphrases are processed through scrypt (N=2^20, r=8, p=1), using ~1GB RAM and taking ~1 second. Use a strong passphrase (6+ random words).
+
+Keys are zeroized in memory when dropped, not just freed.
+
+Mnemonic derivation means your cryptocurrency keys share the fate of your master seed. If the seed leaks, your coins are at risk.
 
 ## Examples
 
