@@ -207,6 +207,22 @@ pub enum DeriveAction {
         words: usize,
     },
 
+    /// Derive uniform integer
+    Int {
+        path: String,
+        
+        #[arg(long, default_value = "0")]
+        min: i64,
+        
+        #[arg(long, default_value = "2147483647")] // i32::MAX
+        max: i64,
+    },
+    
+    /// Derive UUID (v4-compatible)
+    Uuid {
+        path: String,
+    },
+
     /// Derive raw bytes
     Raw {
         path: String,
@@ -420,6 +436,19 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 let (seed, _) = get_seed(&cli)?;
                 let mnemonic = derive::mnemonic(&seed, &realm, *words)?;
                 println!("{}", mnemonic.as_str());
+            }
+
+            DeriveAction::Int { path, min, max } => {
+                let (seed, _) = get_seed(&cli)?;
+                match derive::integer(&seed, &realm, path, *min, *max) {
+                    Ok(val) => println!("{val}"),
+                    Err(e) => return Err(e),
+                }
+            }
+
+            DeriveAction::Uuid { path } => {
+                let (seed, _) = get_seed(&cli)?;
+                println!("{}", derive::uuid(&seed, &realm, path));
             }
 
             DeriveAction::Raw {

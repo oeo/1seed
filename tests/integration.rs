@@ -306,3 +306,37 @@ fn mnemonic_word_counts() {
         assert_eq!(count, words, "expected {words} words, got {count}");
     }
 }
+
+#[test]
+fn derive_integer_range() {
+    let ctx = TestContext::new();
+
+    let out = ctx
+        .cmd()
+        .args(["derive", "int", "test", "--min", "10", "--max", "20"])
+        .output()
+        .unwrap();
+
+    assert!(out.status.success());
+    let val: i64 = String::from_utf8_lossy(&out.stdout).trim().parse().unwrap();
+    assert!(val >= 10 && val <= 20);
+}
+
+#[test]
+fn derive_uuid_format() {
+    let ctx = TestContext::new();
+
+    let out = ctx
+        .cmd()
+        .args(["derive", "uuid", "test"])
+        .output()
+        .unwrap();
+
+    assert!(out.status.success());
+    let uuid = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    assert_eq!(uuid.len(), 36);
+    
+    // Check basic format xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+    let parts: Vec<&str> = uuid.split('-').collect();
+    assert_eq!(parts.len(), 5);
+}
