@@ -5,7 +5,7 @@ use tempfile::TempDir;
 struct TestContext {
     _dir: TempDir,
     seed_file: std::path::PathBuf,
-    config_dir: std::path::PathBuf,
+    _config_dir: std::path::PathBuf,
 }
 
 impl TestContext {
@@ -20,12 +20,12 @@ impl TestContext {
         // create isolated config directory (not used anymore, but kept for compatibility)
         let config_dir = _dir.path().join("config");
         std::fs::create_dir_all(&config_dir).unwrap();
-        let config_dir = config_dir.canonicalize().unwrap();
+        let _config_dir = config_dir.canonicalize().unwrap();
 
         TestContext {
             _dir,
             seed_file,
-            config_dir,
+            _config_dir,
         }
     }
 
