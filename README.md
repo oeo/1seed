@@ -173,6 +173,12 @@ Default: encrypt to self, decrypt with derived key.
 
 1seed derive mnemonic [OPTIONS]
   -w, --words N           Word count: 12/15/18/21/24 (default: 24)
+
+1seed derive int [OPTIONS] PATH
+  --min N                 Minimum value (default: 0)
+  --max N                 Maximum value (default: 2147483647)
+
+1seed derive uuid PATH    Output as UUID (v4 compatible)
 ```
 
 ### Management
