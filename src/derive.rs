@@ -26,57 +26,63 @@ pub fn mnemonic(
     Ok(Zeroizing::new(mnemonic.to_string()))
 }
 
-pub fn integer(seed: &Seed, realm: &str, path: &str, min: i64, max: i64) -> Result<i64, Box<dyn std::error::Error>> {
+pub fn integer(
+    seed: &Seed,
+    realm: &str,
+    path: &str,
+    min: i64,
+    max: i64,
+) -> Result<i64, Box<dyn std::error::Error>> {
     if min > max {
         return Err("min must be less than or equal to max".into());
     }
 
     let range = (max as i128 - min as i128 + 1) as u128;
-    
-    // We need enough bytes to cover the range. 
+
+    // We need enough bytes to cover the range.
     // 8 bytes (u64) covers up to 1.8e19, which fits i64 range.
     // To be perfectly uniform via rejection sampling or unbiased modulo,
     // we take 8 bytes chunks.
-    
+
     let key_type = format!("int/{path}");
-    
+
     // We derive a long stream to have enough attempts for rejection sampling
     // 256 bytes = 32 attempts of u64, highly unlikely to fail all.
     let raw = seed.derive(realm, &key_type, 256);
-    
+
     let chunk_size = 8;
     let limit = u64::MAX as u128 - (u64::MAX as u128 % range);
-    
+
     for chunk in raw.chunks(chunk_size) {
         if chunk.len() < chunk_size {
             break;
         }
-        
+
         let mut bytes = [0u8; 8];
         bytes.copy_from_slice(chunk);
         let val = u64::from_be_bytes(bytes) as u128;
-        
+
         if val < limit {
             return Ok((min as i128 + (val % range) as i128) as i64);
         }
     }
-    
+
     Err("failed to derive uniform integer (astronomically unlikely)".into())
 }
 
 pub fn uuid(seed: &Seed, realm: &str, path: &str) -> String {
     let key_type = format!("uuid/{path}");
     let mut bytes = *seed.derive_32(realm, &key_type); // derive 32, use 16
-    
+
     // UUID v4 format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
     // Version 4 (random)
     bytes[6] = (bytes[6] & 0x0f) | 0x40;
     // Variant 1 (RFC 4122)
     bytes[8] = (bytes[8] & 0x3f) | 0x80;
-    
+
     // Use the first 16 bytes
     let b = &bytes[0..16];
-    
+
     format!(
         "{:02x}{:02x}{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}",
         b[0], b[1], b[2], b[3],
@@ -127,7 +133,7 @@ mod tests {
             assert!(val >= 10 && val <= 20);
         }
     }
-    
+
     #[test]
     fn uuid_format() {
         let seed = Seed::from_passphrase("test").unwrap();
@@ -136,7 +142,7 @@ mod tests {
         assert_eq!(u.chars().nth(14), Some('4')); // Version 4
         let variant = u.chars().nth(19).unwrap();
         assert!(variant == '8' || variant == '9' || variant == 'a' || variant == 'b'); // Variant 1
-        
+
         let parts: Vec<&str> = u.split('-').collect();
         assert_eq!(parts.len(), 5);
         assert_eq!(parts[0].len(), 8);

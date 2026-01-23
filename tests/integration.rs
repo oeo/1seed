@@ -326,16 +326,12 @@ fn derive_integer_range() {
 fn derive_uuid_format() {
     let ctx = TestContext::new();
 
-    let out = ctx
-        .cmd()
-        .args(["derive", "uuid", "test"])
-        .output()
-        .unwrap();
+    let out = ctx.cmd().args(["derive", "uuid", "test"]).output().unwrap();
 
     assert!(out.status.success());
     let uuid = String::from_utf8_lossy(&out.stdout).trim().to_string();
     assert_eq!(uuid.len(), 36);
-    
+
     // Check basic format xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
     let parts: Vec<&str> = uuid.split('-').collect();
     assert_eq!(parts.len(), 5);

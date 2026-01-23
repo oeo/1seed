@@ -94,6 +94,7 @@ export SEED_REALM=personal
 
 ## Version History
 
+- **v0.5.2**: Code formatting fixes
 - **v0.5.1**: Deterministic Integer and UUID derivation, improved documentation
 - **v0.5.0**: Auto-fallback to ~/.1seed, SEED_NO_KEYRING env var
 - **v0.4.0**: Keyring-only storage, removed config file

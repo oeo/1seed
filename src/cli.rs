@@ -210,18 +210,16 @@ pub enum DeriveAction {
     /// Derive uniform integer
     Int {
         path: String,
-        
+
         #[arg(long, default_value = "0")]
         min: i64,
-        
+
         #[arg(long, default_value = "2147483647")] // i32::MAX
         max: i64,
     },
-    
+
     /// Derive UUID (v4-compatible)
-    Uuid {
-        path: String,
-    },
+    Uuid { path: String },
 
     /// Derive raw bytes
     Raw {
