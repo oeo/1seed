@@ -1,8 +1,10 @@
 PREFIX ?= /usr/local
 BINDIR ?= $(PREFIX)/bin
 MANDIR ?= $(PREFIX)/share/man
+COMPLETIONSDIR ?= $(PREFIX)/share
+LICENSEDIR ?= $(PREFIX)/share/licenses/1seed
 
-.PHONY: all build test install uninstall clean release bump
+.PHONY: all build test install uninstall clean generate fmt lint check bump release
 
 all: build
 
@@ -13,12 +15,31 @@ test:
 	cargo test
 	cargo test --test integration
 
-install: build
+generate: build
+	cargo build --release --features generate --bin 1seed-generate
+	./target/release/1seed-generate .
+
+install: build generate
 	install -d $(DESTDIR)$(BINDIR)
 	install -m 755 target/release/1seed $(DESTDIR)$(BINDIR)/1seed
+	install -d $(DESTDIR)$(MANDIR)/man1
+	install -m 644 man/1seed.1 $(DESTDIR)$(MANDIR)/man1/1seed.1
+	install -d $(DESTDIR)$(COMPLETIONSDIR)/bash-completion/completions
+	install -m 644 completions/1seed.bash $(DESTDIR)$(COMPLETIONSDIR)/bash-completion/completions/1seed
+	install -d $(DESTDIR)$(COMPLETIONSDIR)/zsh/vendor-completions
+	install -m 644 completions/1seed.zsh $(DESTDIR)$(COMPLETIONSDIR)/zsh/vendor-completions/_1seed
+	install -d $(DESTDIR)$(COMPLETIONSDIR)/fish/vendor_completions.d
+	install -m 644 completions/1seed.fish $(DESTDIR)$(COMPLETIONSDIR)/fish/vendor_completions.d/1seed.fish
+	install -d $(DESTDIR)$(LICENSEDIR)
+	install -m 644 LICENSE $(DESTDIR)$(LICENSEDIR)/LICENSE
 
 uninstall:
 	rm -f $(DESTDIR)$(BINDIR)/1seed
+	rm -f $(DESTDIR)$(MANDIR)/man1/1seed.1
+	rm -f $(DESTDIR)$(COMPLETIONSDIR)/bash-completion/completions/1seed
+	rm -f $(DESTDIR)$(COMPLETIONSDIR)/zsh/vendor-completions/_1seed
+	rm -f $(DESTDIR)$(COMPLETIONSDIR)/fish/vendor_completions.d/1seed.fish
+	rm -rf $(DESTDIR)$(LICENSEDIR)
 
 clean:
 	cargo clean
@@ -33,7 +54,7 @@ check: fmt lint test
 
 bump:
 	@echo "Auto-incrementing version..."
-	@current=$$(grep '^version = ' Cargo.toml | sed 's/version = "\(.*\)"/\1/'); \
+	@current=$$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/'); \
 	major=$$(echo $$current | cut -d. -f1); \
 	minor=$$(echo $$current | cut -d. -f2); \
 	patch=$$(echo $$current | cut -d. -f3); \
@@ -45,7 +66,7 @@ bump:
 		patch=$$((patch + 1)); \
 	fi; \
 	new_version="$$major.$$minor.$$patch"; \
-	echo "Current: $$current → New: $$new_version"; \
+	echo "Current: $$current -> New: $$new_version"; \
 	$(MAKE) release VERSION=$$new_version
 
 release:

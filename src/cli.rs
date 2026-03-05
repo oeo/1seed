@@ -3,7 +3,7 @@ use std::io::Write;
 use std::path::PathBuf;
 
 use crate::seed::{Seed, SeedSource};
-use crate::{age, derive, password, sign, ssh, update};
+use crate::{age, derive, password, sign, ssh};
 
 #[derive(Parser)]
 #[command(name = "1seed")]
@@ -82,12 +82,6 @@ pub enum Commands {
 
     /// Show status and derived keys
     Status,
-
-    /// Update to latest release from GitHub
-    Update {
-        #[arg(long)]
-        check: bool,
-    },
 }
 
 #[derive(Subcommand)]
@@ -529,10 +523,6 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
 
             Seed::remove()?;
             eprintln!("seed removed");
-        }
-
-        Commands::Update { check } => {
-            update::update(check)?;
         }
 
         Commands::Status => {

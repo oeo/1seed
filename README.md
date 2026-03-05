@@ -18,11 +18,15 @@ Deterministic cryptographic keys from a single seed.
 ## Installation
 
 ```bash
-# Quick Install
-curl -fsSL https://raw.githubusercontent.com/oeo/1seed/master/install.sh | bash
-
 # From crates.io
 cargo install oneseed
+
+# From source
+git clone https://github.com/oeo/1seed && cd 1seed
+make install
+
+# Generate man page and shell completions
+make generate
 ```
 
 ## Quick Start
@@ -53,7 +57,7 @@ export SEED_REALM=work
 ## Commands
 
 ### Initialization
-- `1seed init [-g | -p]` : Store seed (generate random or use passphrase).
+- `1seed init [-g | -p | --from-file FILE]` : Store seed (generate random, passphrase, or file).
 - `1seed forget --confirm` : Remove seed from all storage.
 - `1seed status` : Show seed location and public keys.
 
@@ -72,9 +76,6 @@ export SEED_REALM=work
 - `1seed derive uuid PATH` : Deterministic UUIDs.
 - `1seed derive mnemonic [-w 24]` : BIP39 word phrases.
 - `1seed derive raw PATH [--hex | --base64]` : Deterministic raw bytes.
-
-### Management
-- `1seed update [--check]` : Update to latest release from GitHub.
 
 ## Realms
 
@@ -98,7 +99,7 @@ export SEED_REALM=personal
 - **v0.5.1**: Deterministic Integer and UUID derivation, improved documentation
 - **v0.5.0**: Auto-fallback to ~/.1seed, SEED_NO_KEYRING env var
 - **v0.4.0**: Keyring-only storage, removed config file
-- **v0.3.0**: Self-update command, simplified config
+- **v0.3.0**: Simplified config
 - **v0.2.0**: Domain-based namespaces (`age`, `ssh`, `sign`, `derive`)
 - **v0.1.0**: Initial release
 

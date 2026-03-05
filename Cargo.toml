@@ -12,6 +12,11 @@ categories = ["command-line-utilities", "cryptography"]
 name = "1seed"
 path = "src/main.rs"
 
+[[bin]]
+name = "1seed-generate"
+path = "src/generate.rs"
+required-features = ["generate"]
+
 [dependencies]
 # KDF
 scrypt = "0.11"
@@ -30,22 +35,21 @@ bip39 = "2.0"
 
 # CLI
 clap = { version = "4.4", features = ["derive", "env"] }
+clap_mangen = { version = "0.2", optional = true }
+clap_complete = { version = "4.4", optional = true }
 rpassword = "7.3"
 
 # Utilities
 base64 = "0.21"
 hex = "0.4"
-serde_json = "1.0"
 bech32 = "0.9"
 dirs = "5.0"
 
 # Secure storage
 keyring = { version = "3.6", features = ["apple-native", "windows-native", "linux-native"] }
 
-# Self-update
-ureq = { version = "2.10", default-features = false, features = ["tls", "json"] }
-flate2 = "1.0"
-tar = "0.4"
+[features]
+generate = ["dep:clap_mangen", "dep:clap_complete"]
 
 [dev-dependencies]
 tempfile = "3.10"

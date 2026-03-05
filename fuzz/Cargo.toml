@@ -1,0 +1,30 @@
+[package]
+name = "oneseed-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+oneseed = { path = ".." }
+clap = { version = "4.4", features = ["derive"] }
+
+[[bin]]
+name = "fuzz_derive"
+path = "fuzz_targets/fuzz_derive.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_password"
+path = "fuzz_targets/fuzz_password.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_cli_parse"
+path = "fuzz_targets/fuzz_cli_parse.rs"
+doc = false
+
+[workspace]

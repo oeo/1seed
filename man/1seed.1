@@ -1,0 +1,65 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH 1seed 1  "1seed 0.5.2" 
+.SH NAME
+1seed \- Deterministic cryptographic keys from a single seed
+.SH SYNOPSIS
+\fB1seed\fR [\fB\-\-realm\fR] [\fB\-h\fR|\fB\-\-help\fR] [\fB\-V\fR|\fB\-\-version\fR] <\fIsubcommands\fR>
+.SH DESCRIPTION
+Deterministic cryptographic keys from a single seed
+.SH OPTIONS
+.TP
+\fB\-\-realm\fR \fI<REALM>\fR
+
+.RS
+May also be specified with the \fBSEED_REALM\fR environment variable. 
+.RE
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.TP
+\fB\-V\fR, \fB\-\-version\fR
+Print version
+.SH SUBCOMMANDS
+.TP
+1seed\-age(1)
+Age encryption keys and operations
+.TP
+1seed\-ssh(1)
+SSH keys and operations
+.TP
+1seed\-sign(1)
+Ed25519 signing keys and operations
+.TP
+1seed\-derive(1)
+Derive passwords, mnemonics, and raw bytes
+.TP
+1seed\-init(1)
+Initialize: store seed in OS keychain
+.TP
+1seed\-forget(1)
+Remove seed from OS keychain
+.TP
+1seed\-status(1)
+Show status and derived keys
+.TP
+1seed\-help(1)
+Print this message or the help of the given subcommand(s)
+.SH EXTRA
+EXAMPLES:
+    1seed init                       Store seed in OS keychain
+    1seed age pub                    Show age public key
+    1seed \-\-realm work ssh add       Add work SSH key to agent
+    echo secret | 1seed age encrypt  Encrypt to self
+    1seed derive password github.com Derive password
+
+ENVIRONMENT:
+    SEED_FILE        Override: use specific file
+    SEED_NO_KEYRING  Use ~/.1seed only (bypass keyring)
+    SEED_REALM       Default realm (default: "default")
+
+STORAGE:
+    Priority: SEED_FILE > keyring > ~/.1seed > prompt
+    Keyring: macOS Keychain, Linux Secret Service, Windows Credential Manager
+.SH VERSION
+v0.5.2
