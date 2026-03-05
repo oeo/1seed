@@ -75,3 +75,63 @@ pub fn add_to_agent(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::seed::Seed;
+
+    #[test]
+    fn public_key_format() {
+        let seed = Seed::from_passphrase("test").unwrap();
+        let pubkey = derive_public(&seed, "realm");
+        assert!(pubkey.starts_with("ssh-ed25519 "));
+        assert!(pubkey.contains("1seed:realm"));
+    }
+
+    #[test]
+    fn public_key_deterministic() {
+        let seed1 = Seed::from_passphrase("test").unwrap();
+        let seed2 = Seed::from_passphrase("test").unwrap();
+        assert_eq!(
+            derive_public(&seed1, "realm"),
+            derive_public(&seed2, "realm")
+        );
+    }
+
+    #[test]
+    fn private_key_openssh_format() {
+        let seed = Seed::from_passphrase("test").unwrap();
+        let privkey = derive_private(&seed, "realm");
+        assert!(privkey.starts_with("-----BEGIN OPENSSH PRIVATE KEY-----"));
+        assert!(privkey
+            .trim_end()
+            .ends_with("-----END OPENSSH PRIVATE KEY-----"));
+    }
+
+    #[test]
+    fn different_realms_different_keys() {
+        let seed = Seed::from_passphrase("test").unwrap();
+        assert_ne!(derive_public(&seed, "a"), derive_public(&seed, "b"));
+    }
+
+    #[test]
+    fn private_key_matches_public_key() {
+        let seed = Seed::from_passphrase("test").unwrap();
+        let privkey_str = derive_private(&seed, "realm");
+        let pubkey_str = derive_public(&seed, "realm");
+
+        // parse the private key and extract its public half
+        let privkey = PrivateKey::from_openssh(&privkey_str).unwrap();
+        let derived_pub = privkey.public_key().to_openssh().unwrap();
+
+        // the public key string includes a comment, strip it for comparison
+        let pubkey_no_comment = pubkey_str
+            .split_whitespace()
+            .take(2)
+            .collect::<Vec<_>>()
+            .join(" ");
+
+        assert_eq!(derived_pub, pubkey_no_comment);
+    }
+}

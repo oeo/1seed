@@ -27,7 +27,7 @@ impl Seed {
     }
 
     pub fn from_passphrase(passphrase: &str) -> Result<Self, Box<dyn std::error::Error>> {
-        let scrypt_n = if std::env::var("ONESEED_TEST_MODE").is_ok() {
+        let scrypt_n = if cfg!(test) || std::env::var("ONESEED_TEST_MODE").is_ok() {
             12
         } else {
             20
@@ -213,5 +213,60 @@ mod tests {
         let key2 = seed.derive("realm", "ssh", 32);
 
         assert_ne!(key1.as_slice(), key2.as_slice());
+    }
+
+    #[test]
+    fn different_passphrases_different_keys() {
+        let seed1 = Seed::from_passphrase("passphrase one").unwrap();
+        let seed2 = Seed::from_passphrase("passphrase two").unwrap();
+
+        let key1 = seed1.derive("realm", "age", 32);
+        let key2 = seed2.derive("realm", "age", 32);
+
+        assert_ne!(key1.as_slice(), key2.as_slice());
+    }
+
+    #[test]
+    fn derive_various_lengths() {
+        let seed = Seed::from_passphrase("test").unwrap();
+
+        for len in [16, 32, 48, 64] {
+            let key = seed.derive("realm", "type", len);
+            assert_eq!(key.len(), len);
+        }
+    }
+
+    #[test]
+    fn from_bytes_binary_uses_raw() {
+        // 32 bytes with a non-ascii byte should be treated as raw binary
+        let mut raw = [0u8; 32];
+        raw[0] = 0xFF;
+        let seed = Seed::from_bytes(&raw).unwrap();
+
+        // derive something to prove it works
+        let key = seed.derive("r", "t", 32);
+        assert_eq!(key.len(), 32);
+    }
+
+    #[test]
+    fn from_bytes_ascii_uses_passphrase() {
+        // pure ascii text should be treated as a passphrase
+        let text = b"my passphrase";
+        let seed_from_bytes = Seed::from_bytes(text).unwrap();
+        let seed_from_passphrase = Seed::from_passphrase("my passphrase").unwrap();
+
+        let key1 = seed_from_bytes.derive("r", "t", 32);
+        let key2 = seed_from_passphrase.derive("r", "t", 32);
+        assert_eq!(key1.as_slice(), key2.as_slice());
+    }
+
+    #[test]
+    fn derive_32_matches_derive() {
+        let seed = Seed::from_passphrase("test").unwrap();
+
+        let from_derive = seed.derive("realm", "age", 32);
+        let from_derive_32 = seed.derive_32("realm", "age");
+
+        assert_eq!(from_derive.as_slice(), from_derive_32.as_slice());
     }
 }

@@ -211,3 +211,81 @@ fn write_output(path: Option<&Path>, data: &[u8]) -> Result<(), Box<dyn std::err
         None => Ok(std::io::stdout().write_all(data)?),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::seed::Seed;
+
+    #[test]
+    fn recipient_format() {
+        let seed = Seed::from_passphrase("test").unwrap();
+        let recipient = derive_recipient(&seed, "realm");
+        assert!(recipient.starts_with("age1"));
+    }
+
+    #[test]
+    fn identity_format() {
+        let seed = Seed::from_passphrase("test").unwrap();
+        let identity = derive_identity(&seed, "realm");
+        assert!(identity.starts_with("AGE-SECRET-KEY-1"));
+    }
+
+    #[test]
+    fn recipient_deterministic() {
+        let seed1 = Seed::from_passphrase("test").unwrap();
+        let seed2 = Seed::from_passphrase("test").unwrap();
+        assert_eq!(
+            derive_recipient(&seed1, "realm"),
+            derive_recipient(&seed2, "realm")
+        );
+    }
+
+    #[test]
+    fn different_realms_different_recipients() {
+        let seed = Seed::from_passphrase("test").unwrap();
+        assert_ne!(derive_recipient(&seed, "a"), derive_recipient(&seed, "b"));
+    }
+
+    #[test]
+    fn identity_roundtrips_to_recipient() {
+        let seed = Seed::from_passphrase("test").unwrap();
+        let identity = derive_identity(&seed, "realm");
+        let recipient = derive_recipient(&seed, "realm");
+
+        // parse the identity and derive its public key
+        let parsed: ::age::x25519::Identity = identity.parse().unwrap();
+        let derived_recipient = parsed.to_public().to_string();
+
+        assert_eq!(recipient, derived_recipient);
+    }
+
+    #[test]
+    fn encrypt_decrypt_in_memory() {
+        let seed = Seed::from_passphrase("test").unwrap();
+        let recipient_str = derive_recipient(&seed, "realm");
+        let identity_str = derive_identity(&seed, "realm");
+
+        let recipient = parse_recipient(&recipient_str).unwrap();
+        let plaintext = b"hello world";
+
+        // encrypt to a temp file
+        let dir = tempfile::TempDir::new().unwrap();
+        let ct_path = dir.path().join("ct");
+        let pt_path = dir.path().join("pt");
+
+        // write plaintext to a file for input
+        let in_path = dir.path().join("in");
+        std::fs::write(&in_path, plaintext).unwrap();
+
+        encrypt(vec![recipient], false, Some(&in_path), Some(&ct_path)).unwrap();
+        decrypt(&identity_str, Some(&ct_path), Some(&pt_path)).unwrap();
+
+        assert_eq!(std::fs::read(&pt_path).unwrap(), plaintext);
+    }
+
+    #[test]
+    fn parse_recipient_rejects_garbage() {
+        assert!(parse_recipient("not-a-valid-recipient").is_err());
+    }
+}

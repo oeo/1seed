@@ -151,4 +151,60 @@ mod tests {
         assert_eq!(parts[3].len(), 4);
         assert_eq!(parts[4].len(), 12);
     }
+
+    #[test]
+    fn uuid_deterministic() {
+        let seed = Seed::from_passphrase("test").unwrap();
+        assert_eq!(uuid(&seed, "realm", "id"), uuid(&seed, "realm", "id"));
+    }
+
+    #[test]
+    fn uuid_different_paths() {
+        let seed = Seed::from_passphrase("test").unwrap();
+        assert_ne!(uuid(&seed, "realm", "a"), uuid(&seed, "realm", "b"));
+    }
+
+    #[test]
+    fn raw_deterministic() {
+        let seed = Seed::from_passphrase("test").unwrap();
+        let r1 = raw(&seed, "realm", "key", 32);
+        let r2 = raw(&seed, "realm", "key", 32);
+        assert_eq!(r1.as_slice(), r2.as_slice());
+    }
+
+    #[test]
+    fn raw_respects_length() {
+        let seed = Seed::from_passphrase("test").unwrap();
+        for len in [1, 16, 32, 64, 128] {
+            assert_eq!(raw(&seed, "realm", "key", len).len(), len);
+        }
+    }
+
+    #[test]
+    fn mnemonic_rejects_invalid_word_count() {
+        let seed = Seed::from_passphrase("test").unwrap();
+        assert!(mnemonic(&seed, "realm", 13).is_err());
+        assert!(mnemonic(&seed, "realm", 0).is_err());
+        assert!(mnemonic(&seed, "realm", 25).is_err());
+    }
+
+    #[test]
+    fn integer_rejects_min_greater_than_max() {
+        let seed = Seed::from_passphrase("test").unwrap();
+        assert!(integer(&seed, "realm", "x", 100, 0).is_err());
+    }
+
+    #[test]
+    fn integer_single_value_range() {
+        let seed = Seed::from_passphrase("test").unwrap();
+        let val = integer(&seed, "realm", "x", 42, 42).unwrap();
+        assert_eq!(val, 42);
+    }
+
+    #[test]
+    fn integer_negative_range() {
+        let seed = Seed::from_passphrase("test").unwrap();
+        let val = integer(&seed, "realm", "x", -100, -50).unwrap();
+        assert!(val >= -100 && val <= -50);
+    }
 }

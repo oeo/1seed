@@ -60,3 +60,80 @@ fn read_input(path: Option<&Path>) -> Result<Vec<u8>, Box<dyn std::error::Error>
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::seed::Seed;
+
+    #[test]
+    fn public_key_deterministic() {
+        let seed1 = Seed::from_passphrase("test").unwrap();
+        let seed2 = Seed::from_passphrase("test").unwrap();
+        assert_eq!(
+            derive_public(&seed1, "realm"),
+            derive_public(&seed2, "realm")
+        );
+    }
+
+    #[test]
+    fn public_key_is_valid_base64() {
+        let seed = Seed::from_passphrase("test").unwrap();
+        let pubkey = derive_public(&seed, "realm");
+        use base64::Engine;
+        let decoded = base64::engine::general_purpose::STANDARD
+            .decode(&pubkey)
+            .unwrap();
+        assert_eq!(decoded.len(), 32);
+    }
+
+    #[test]
+    fn sign_verify_file() {
+        let seed = Seed::from_passphrase("test").unwrap();
+        let pubkey = derive_public(&seed, "realm");
+
+        let dir = tempfile::TempDir::new().unwrap();
+        let data_path = dir.path().join("data");
+        std::fs::write(&data_path, b"test data").unwrap();
+
+        let sig = sign(&seed, "realm", Some(&data_path)).unwrap();
+        assert!(verify(&pubkey, &sig, Some(&data_path)).unwrap());
+    }
+
+    #[test]
+    fn verify_rejects_tampered_data() {
+        let seed = Seed::from_passphrase("test").unwrap();
+        let pubkey = derive_public(&seed, "realm");
+
+        let dir = tempfile::TempDir::new().unwrap();
+        let data_path = dir.path().join("data");
+        std::fs::write(&data_path, b"original").unwrap();
+
+        let sig = sign(&seed, "realm", Some(&data_path)).unwrap();
+
+        // tamper with the file
+        std::fs::write(&data_path, b"tampered").unwrap();
+        assert!(!verify(&pubkey, &sig, Some(&data_path)).unwrap());
+    }
+
+    #[test]
+    fn verify_rejects_wrong_key() {
+        let seed = Seed::from_passphrase("test").unwrap();
+
+        let dir = tempfile::TempDir::new().unwrap();
+        let data_path = dir.path().join("data");
+        std::fs::write(&data_path, b"test data").unwrap();
+
+        let sig = sign(&seed, "realm", Some(&data_path)).unwrap();
+
+        // use a different realm's public key
+        let wrong_pubkey = derive_public(&seed, "other-realm");
+        assert!(!verify(&wrong_pubkey, &sig, Some(&data_path)).unwrap());
+    }
+
+    #[test]
+    fn different_realms_different_signing_keys() {
+        let seed = Seed::from_passphrase("test").unwrap();
+        assert_ne!(derive_public(&seed, "a"), derive_public(&seed, "b"));
+    }
+}

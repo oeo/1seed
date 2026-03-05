@@ -124,4 +124,71 @@ mod tests {
 
         assert_ne!(pw1.as_str(), pw2.as_str());
     }
+
+    #[test]
+    fn no_symbols_mode() {
+        let seed = Seed::from_passphrase("test").unwrap();
+
+        for i in 0..50 {
+            let pw = derive(&seed, "realm", &format!("site{i}"), 1, 16, false, "").unwrap();
+            assert!(
+                pw.chars().all(|c| c.is_ascii_alphanumeric()),
+                "no-symbols password contained a symbol: {}",
+                pw.as_str()
+            );
+        }
+    }
+
+    #[test]
+    fn custom_symbols() {
+        let seed = Seed::from_passphrase("test").unwrap();
+
+        for i in 0..50 {
+            let pw = derive(&seed, "realm", &format!("site{i}"), 1, 16, true, "+-").unwrap();
+            // should not contain default symbols that aren't in the custom set
+            for c in pw.chars() {
+                if !c.is_ascii_alphanumeric() {
+                    assert!(
+                        "+-".contains(c),
+                        "password contained unexpected symbol '{c}': {}",
+                        pw.as_str()
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn minimum_length() {
+        let seed = Seed::from_passphrase("test").unwrap();
+        let pw = derive(&seed, "realm", "site", 1, 4, true, "").unwrap();
+        assert_eq!(pw.len(), 4);
+    }
+
+    #[test]
+    fn maximum_length() {
+        let seed = Seed::from_passphrase("test").unwrap();
+        let pw = derive(&seed, "realm", "site", 1, 128, true, "").unwrap();
+        assert_eq!(pw.len(), 128);
+    }
+
+    #[test]
+    fn rejects_too_short() {
+        let seed = Seed::from_passphrase("test").unwrap();
+        assert!(derive(&seed, "realm", "site", 1, 3, true, "").is_err());
+    }
+
+    #[test]
+    fn rejects_too_long() {
+        let seed = Seed::from_passphrase("test").unwrap();
+        assert!(derive(&seed, "realm", "site", 1, 129, true, "").is_err());
+    }
+
+    #[test]
+    fn different_sites_different_passwords() {
+        let seed = Seed::from_passphrase("test").unwrap();
+        let pw1 = derive(&seed, "realm", "github.com", 1, 16, true, "").unwrap();
+        let pw2 = derive(&seed, "realm", "gitlab.com", 1, 16, true, "").unwrap();
+        assert_ne!(pw1.as_str(), pw2.as_str());
+    }
 }
