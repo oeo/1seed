@@ -94,6 +94,7 @@ export SEED_REALM=personal
 
 ## Version History
 
+- **v0.7.0**: Upgraded age crate to 0.11, expanded age encryption test coverage
 - **v0.6.0**: Removed self-update, added man page and fuzz targets
 - **v0.5.2**: Code formatting fixes
 - **v0.5.1**: Deterministic Integer and UUID derivation, improved documentation

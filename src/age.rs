@@ -24,7 +24,7 @@ pub fn derive_identity(seed: &Seed, realm: &str) -> String {
 }
 
 pub fn encrypt(
-    recipients: Vec<Box<dyn ::age::Recipient + Send>>,
+    recipients: Vec<Box<dyn::age::Recipient + Send>>,
     armor: bool,
     input: Option<&Path>,
     output: Option<&Path>,
@@ -35,8 +35,11 @@ pub fn encrypt(
 
     let plaintext = read_input(input)?;
 
-    let encryptor =
-        age::Encryptor::with_recipients(recipients).ok_or("failed to create encryptor")?;
+    let recipient_refs: Vec<&dyn::age::Recipient> = recipients
+        .iter()
+        .map(|r| r.as_ref() as &dyn::age::Recipient)
+        .collect();
+    let encryptor = age::Encryptor::with_recipients(recipient_refs.into_iter())?;
 
     let mut ciphertext = vec![];
 
@@ -65,7 +68,9 @@ pub fn encrypt_passphrase(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let plaintext = read_input(input)?;
 
-    let encryptor = age::Encryptor::with_user_passphrase(passphrase.to_string().into());
+    let encryptor = age::Encryptor::with_user_passphrase(age::secrecy::SecretString::from(
+        passphrase.to_string(),
+    ));
 
     let mut ciphertext = vec![];
 
@@ -101,10 +106,11 @@ pub fn decrypt(
         ciphertext = std::io::Read::bytes(armored_reader).collect::<Result<Vec<u8>, _>>()?;
     }
 
-    let decryptor = match age::Decryptor::new(&ciphertext[..])? {
-        age::Decryptor::Recipients(d) => d,
-        age::Decryptor::Passphrase(_) => return Err("encrypted with passphrase, use -p".into()),
-    };
+    let decryptor = age::Decryptor::new(&ciphertext[..])?;
+
+    if decryptor.is_scrypt() {
+        return Err("encrypted with passphrase, use -p".into());
+    }
 
     let mut plaintext = vec![];
     let mut reader = decryptor.decrypt(std::iter::once(&identity as &dyn age::Identity))?;
@@ -130,10 +136,11 @@ pub fn decrypt_with_file(
         ciphertext = std::io::Read::bytes(armored_reader).collect::<Result<Vec<u8>, _>>()?;
     }
 
-    let decryptor = match age::Decryptor::new(&ciphertext[..])? {
-        age::Decryptor::Recipients(d) => d,
-        age::Decryptor::Passphrase(_) => return Err("encrypted with passphrase, use -p".into()),
-    };
+    let decryptor = age::Decryptor::new(&ciphertext[..])?;
+
+    if decryptor.is_scrypt() {
+        return Err("encrypted with passphrase, use -p".into());
+    }
 
     let mut plaintext = vec![];
     let mut reader = decryptor.decrypt(std::iter::once(&identity as &dyn age::Identity))?;
@@ -156,13 +163,15 @@ pub fn decrypt_passphrase(
         ciphertext = std::io::Read::bytes(armored_reader).collect::<Result<Vec<u8>, _>>()?;
     }
 
-    let decryptor = match age::Decryptor::new(&ciphertext[..])? {
-        age::Decryptor::Recipients(_) => return Err("not encrypted with passphrase".into()),
-        age::Decryptor::Passphrase(d) => d,
-    };
+    let decryptor = age::Decryptor::new(&ciphertext[..])?;
 
+    if !decryptor.is_scrypt() {
+        return Err("not encrypted with passphrase".into());
+    }
+
+    let scrypt_identity = age::scrypt::Identity::new(passphrase.to_string().into());
     let mut plaintext = vec![];
-    let mut reader = decryptor.decrypt(&passphrase.to_string().into(), None)?;
+    let mut reader = decryptor.decrypt(std::iter::once(&scrypt_identity as &dyn age::Identity))?;
     reader.read_to_end(&mut plaintext)?;
 
     write_output(output, &plaintext)?;
@@ -171,16 +180,16 @@ pub fn decrypt_passphrase(
 
 pub fn parse_recipient(
     s: &str,
-) -> Result<Box<dyn ::age::Recipient + Send>, Box<dyn std::error::Error>> {
+) -> Result<Box<dyn::age::Recipient + Send>, Box<dyn std::error::Error>> {
     let recipient: age::x25519::Recipient = s.parse()?;
     Ok(Box::new(recipient))
 }
 
 pub fn parse_recipients_file(
     path: &Path,
-) -> Result<Vec<Box<dyn ::age::Recipient + Send>>, Box<dyn std::error::Error>> {
+) -> Result<Vec<Box<dyn::age::Recipient + Send>>, Box<dyn std::error::Error>> {
     let content = std::fs::read_to_string(path)?;
-    let mut recipients: Vec<Box<dyn ::age::Recipient + Send>> = vec![];
+    let mut recipients: Vec<Box<dyn::age::Recipient + Send>> = vec![];
 
     for line in content.lines() {
         let line = line.trim();
@@ -287,5 +296,253 @@ mod tests {
     #[test]
     fn parse_recipient_rejects_garbage() {
         assert!(parse_recipient("not-a-valid-recipient").is_err());
+    }
+
+    #[test]
+    fn encrypt_decrypt_armored_roundtrip() {
+        let seed = Seed::from_passphrase("test").unwrap();
+        let recipient_str = derive_recipient(&seed, "realm");
+        let identity_str = derive_identity(&seed, "realm");
+
+        let recipient = parse_recipient(&recipient_str).unwrap();
+        let plaintext = b"armored test data";
+
+        let dir = tempfile::TempDir::new().unwrap();
+        let in_path = dir.path().join("in");
+        let ct_path = dir.path().join("ct");
+        let pt_path = dir.path().join("pt");
+
+        std::fs::write(&in_path, plaintext).unwrap();
+
+        encrypt(vec![recipient], true, Some(&in_path), Some(&ct_path)).unwrap();
+
+        // verify ciphertext is armored
+        let ct = std::fs::read_to_string(&ct_path).unwrap();
+        assert!(ct.contains("-----BEGIN AGE ENCRYPTED FILE-----"));
+
+        decrypt(&identity_str, Some(&ct_path), Some(&pt_path)).unwrap();
+        assert_eq!(std::fs::read(&pt_path).unwrap(), plaintext);
+    }
+
+    #[test]
+    fn encrypt_decrypt_passphrase_roundtrip() {
+        let passphrase = "test-passphrase-for-age";
+
+        let dir = tempfile::TempDir::new().unwrap();
+        let in_path = dir.path().join("in");
+        let ct_path = dir.path().join("ct");
+        let pt_path = dir.path().join("pt");
+
+        let plaintext = b"passphrase encrypted data";
+        std::fs::write(&in_path, plaintext).unwrap();
+
+        encrypt_passphrase(passphrase, false, Some(&in_path), Some(&ct_path)).unwrap();
+        decrypt_passphrase(passphrase, Some(&ct_path), Some(&pt_path)).unwrap();
+
+        assert_eq!(std::fs::read(&pt_path).unwrap(), plaintext);
+    }
+
+    #[test]
+    fn encrypt_decrypt_passphrase_armored_roundtrip() {
+        let passphrase = "armored-passphrase-test";
+
+        let dir = tempfile::TempDir::new().unwrap();
+        let in_path = dir.path().join("in");
+        let ct_path = dir.path().join("ct");
+        let pt_path = dir.path().join("pt");
+
+        let plaintext = b"armored passphrase data";
+        std::fs::write(&in_path, plaintext).unwrap();
+
+        encrypt_passphrase(passphrase, true, Some(&in_path), Some(&ct_path)).unwrap();
+
+        let ct = std::fs::read_to_string(&ct_path).unwrap();
+        assert!(ct.contains("-----BEGIN AGE ENCRYPTED FILE-----"));
+
+        decrypt_passphrase(passphrase, Some(&ct_path), Some(&pt_path)).unwrap();
+        assert_eq!(std::fs::read(&pt_path).unwrap(), plaintext);
+    }
+
+    #[test]
+    fn decrypt_rejects_passphrase_encrypted_file() {
+        let passphrase = "test-passphrase";
+
+        let dir = tempfile::TempDir::new().unwrap();
+        let in_path = dir.path().join("in");
+        let ct_path = dir.path().join("ct");
+        let pt_path = dir.path().join("pt");
+
+        std::fs::write(&in_path, b"data").unwrap();
+        encrypt_passphrase(passphrase, false, Some(&in_path), Some(&ct_path)).unwrap();
+
+        // trying to decrypt passphrase-encrypted file with identity should fail
+        let seed = Seed::from_passphrase("test").unwrap();
+        let identity_str = derive_identity(&seed, "realm");
+        let err = decrypt(&identity_str, Some(&ct_path), Some(&pt_path)).unwrap_err();
+        assert!(err.to_string().contains("passphrase"));
+    }
+
+    #[test]
+    fn decrypt_passphrase_rejects_recipient_encrypted_file() {
+        let seed = Seed::from_passphrase("test").unwrap();
+        let recipient_str = derive_recipient(&seed, "realm");
+        let recipient = parse_recipient(&recipient_str).unwrap();
+
+        let dir = tempfile::TempDir::new().unwrap();
+        let in_path = dir.path().join("in");
+        let ct_path = dir.path().join("ct");
+        let pt_path = dir.path().join("pt");
+
+        std::fs::write(&in_path, b"data").unwrap();
+        encrypt(vec![recipient], false, Some(&in_path), Some(&ct_path)).unwrap();
+
+        // trying to decrypt recipient-encrypted file with passphrase should fail
+        let err = decrypt_passphrase("wrong", Some(&ct_path), Some(&pt_path)).unwrap_err();
+        assert!(err.to_string().contains("not encrypted with passphrase"));
+    }
+
+    #[test]
+    fn encrypt_decrypt_empty_plaintext() {
+        let seed = Seed::from_passphrase("test").unwrap();
+        let recipient_str = derive_recipient(&seed, "realm");
+        let identity_str = derive_identity(&seed, "realm");
+
+        let recipient = parse_recipient(&recipient_str).unwrap();
+
+        let dir = tempfile::TempDir::new().unwrap();
+        let in_path = dir.path().join("in");
+        let ct_path = dir.path().join("ct");
+        let pt_path = dir.path().join("pt");
+
+        std::fs::write(&in_path, b"").unwrap();
+
+        encrypt(vec![recipient], false, Some(&in_path), Some(&ct_path)).unwrap();
+        decrypt(&identity_str, Some(&ct_path), Some(&pt_path)).unwrap();
+
+        assert_eq!(std::fs::read(&pt_path).unwrap(), b"");
+    }
+
+    #[test]
+    fn encrypt_decrypt_large_plaintext() {
+        let seed = Seed::from_passphrase("test").unwrap();
+        let recipient_str = derive_recipient(&seed, "realm");
+        let identity_str = derive_identity(&seed, "realm");
+
+        let recipient = parse_recipient(&recipient_str).unwrap();
+        let plaintext = vec![0xABu8; 64 * 1024]; // 64KB
+
+        let dir = tempfile::TempDir::new().unwrap();
+        let in_path = dir.path().join("in");
+        let ct_path = dir.path().join("ct");
+        let pt_path = dir.path().join("pt");
+
+        std::fs::write(&in_path, &plaintext).unwrap();
+
+        encrypt(vec![recipient], false, Some(&in_path), Some(&ct_path)).unwrap();
+        decrypt(&identity_str, Some(&ct_path), Some(&pt_path)).unwrap();
+
+        assert_eq!(std::fs::read(&pt_path).unwrap(), plaintext);
+    }
+
+    #[test]
+    fn decrypt_with_key_file_roundtrip() {
+        let seed = Seed::from_passphrase("test").unwrap();
+        let recipient_str = derive_recipient(&seed, "realm");
+        let identity_str = derive_identity(&seed, "realm");
+
+        let recipient = parse_recipient(&recipient_str).unwrap();
+
+        let dir = tempfile::TempDir::new().unwrap();
+        let in_path = dir.path().join("in");
+        let ct_path = dir.path().join("ct");
+        let key_path = dir.path().join("key");
+        let pt_path = dir.path().join("pt");
+
+        std::fs::write(&in_path, b"key file test").unwrap();
+        std::fs::write(&key_path, &identity_str).unwrap();
+
+        encrypt(vec![recipient], false, Some(&in_path), Some(&ct_path)).unwrap();
+        decrypt_with_file(&key_path, Some(&ct_path), Some(&pt_path)).unwrap();
+
+        assert_eq!(std::fs::read(&pt_path).unwrap(), b"key file test");
+    }
+
+    #[test]
+    fn encrypt_to_multiple_recipients() {
+        let seed = Seed::from_passphrase("test").unwrap();
+
+        // derive two different recipients from different realms
+        let recipient1_str = derive_recipient(&seed, "realm1");
+        let identity1_str = derive_identity(&seed, "realm1");
+        let recipient2_str = derive_recipient(&seed, "realm2");
+        let identity2_str = derive_identity(&seed, "realm2");
+
+        let r1 = parse_recipient(&recipient1_str).unwrap();
+        let r2 = parse_recipient(&recipient2_str).unwrap();
+
+        let dir = tempfile::TempDir::new().unwrap();
+        let in_path = dir.path().join("in");
+        let ct_path = dir.path().join("ct");
+        let pt1_path = dir.path().join("pt1");
+        let pt2_path = dir.path().join("pt2");
+
+        std::fs::write(&in_path, b"multi-recipient").unwrap();
+
+        // encrypt to both recipients
+        encrypt(vec![r1, r2], false, Some(&in_path), Some(&ct_path)).unwrap();
+
+        // either identity should decrypt
+        decrypt(&identity1_str, Some(&ct_path), Some(&pt1_path)).unwrap();
+        assert_eq!(std::fs::read(&pt1_path).unwrap(), b"multi-recipient");
+
+        decrypt(&identity2_str, Some(&ct_path), Some(&pt2_path)).unwrap();
+        assert_eq!(std::fs::read(&pt2_path).unwrap(), b"multi-recipient");
+    }
+
+    #[test]
+    fn encrypt_rejects_empty_recipients() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let in_path = dir.path().join("in");
+        let ct_path = dir.path().join("ct");
+
+        std::fs::write(&in_path, b"data").unwrap();
+
+        let err = encrypt(vec![], false, Some(&in_path), Some(&ct_path)).unwrap_err();
+        assert!(err.to_string().contains("no recipients"));
+    }
+
+    #[test]
+    fn wrong_passphrase_fails_decrypt() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let in_path = dir.path().join("in");
+        let ct_path = dir.path().join("ct");
+        let pt_path = dir.path().join("pt");
+
+        std::fs::write(&in_path, b"secret data").unwrap();
+        encrypt_passphrase("correct-passphrase", false, Some(&in_path), Some(&ct_path)).unwrap();
+
+        let result = decrypt_passphrase("wrong-passphrase", Some(&ct_path), Some(&pt_path));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn wrong_identity_fails_decrypt() {
+        let seed = Seed::from_passphrase("test").unwrap();
+        let recipient_str = derive_recipient(&seed, "realm1");
+        let recipient = parse_recipient(&recipient_str).unwrap();
+
+        // encrypt to realm1's recipient
+        let dir = tempfile::TempDir::new().unwrap();
+        let in_path = dir.path().join("in");
+        let ct_path = dir.path().join("ct");
+        let pt_path = dir.path().join("pt");
+
+        std::fs::write(&in_path, b"secret").unwrap();
+        encrypt(vec![recipient], false, Some(&in_path), Some(&ct_path)).unwrap();
+
+        // try to decrypt with realm2's identity
+        let wrong_identity = derive_identity(&seed, "realm2");
+        let result = decrypt(&wrong_identity, Some(&ct_path), Some(&pt_path));
+        assert!(result.is_err());
     }
 }
