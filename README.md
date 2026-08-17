@@ -41,7 +41,7 @@ echo "secret" | 1seed age encrypt  # Encrypt to self
 
 ## Seed Storage
 
-**Priority**: `SEED_FILE` env → OS keyring → `~/.1seed`.
+**Priority**: `--seed-file` flag → `SEED_FILE` env → OS keyring → `~/.1seed`.
 
 1seed uses OS-native credential stores (Keychain, Secret Service, Credential Manager) where available. If unavailable, it automatically falls back to `~/.1seed` (mode 0600).
 

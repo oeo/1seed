@@ -19,16 +19,19 @@ use crate::{age, derive, password, sign, ssh};
     echo secret | 1seed age encrypt  Encrypt to self
     1seed derive password github.com Derive password
 
-ENVIRONMENT:
-    SEED_FILE        Override: use specific file
-    SEED_NO_KEYRING  Use ~/.1seed only (bypass keyring)
-    SEED_REALM       Default realm (default: \"default\")
+FLAGS / ENVIRONMENT:
+    --seed-file          Seed file path (takes precedence over SEED_FILE)
+    SEED_NO_KEYRING      Use ~/.1seed only (bypass keyring)
+    --realm              Default realm (takes precedence over SEED_REALM)
 
 STORAGE:
-    Priority: SEED_FILE > keyring > ~/.1seed
+    Priority: flag > env > keyring > ~/.1seed
     Keyring: macOS Keychain, Linux Secret Service, Windows Credential Manager
 ")]
 pub struct Cli {
+    #[arg(long)]
+    pub seed_file: Option<PathBuf>,
+
     #[arg(long, global = true, env = "SEED_REALM")]
     pub realm: Option<String>,
 
@@ -239,7 +242,10 @@ impl Cli {
     }
 }
 
-fn get_seed(_cli: &Cli) -> Result<(Seed, SeedSource), Box<dyn std::error::Error>> {
+fn get_seed(cli: &Cli) -> Result<(Seed, SeedSource), Box<dyn std::error::Error>> {
+    if let Some(ref path) = cli.seed_file {
+        return Ok((Seed::from_file(path)?, SeedSource::EnvFile(path.clone())));
+    }
     Seed::load()
 }
 
