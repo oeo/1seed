@@ -30,7 +30,7 @@ zeroize = { version = "1.7", features = ["derive"] }
 getrandom = "0.2"
 
 # Key formats
-age = { version = "0.11", features = ["armor"] }
+age = { version = "0.12", features = ["armor"] }
 ssh-key = { version = "0.6", features = ["ed25519"] }
 bip39 = "2.0"
 

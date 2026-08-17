@@ -1,0 +1,5 @@
+[advisories]
+ignore = [
+  # Optional ssh-key feature is inactive; `cargo tree --invert rsa` is empty.
+  "RUSTSEC-2023-0071",
+]
