@@ -24,7 +24,7 @@ pub fn derive_identity(seed: &Seed, realm: &str) -> String {
 }
 
 pub fn encrypt(
-    recipients: Vec<Box<dyn::age::Recipient + Send>>,
+    recipients: Vec<Box<dyn ::age::Recipient + Send>>,
     armor: bool,
     input: Option<&Path>,
     output: Option<&Path>,
@@ -35,9 +35,9 @@ pub fn encrypt(
 
     let plaintext = read_input(input)?;
 
-    let recipient_refs: Vec<&dyn::age::Recipient> = recipients
+    let recipient_refs: Vec<&dyn ::age::Recipient> = recipients
         .iter()
-        .map(|r| r.as_ref() as &dyn::age::Recipient)
+        .map(|r| r.as_ref() as &dyn ::age::Recipient)
         .collect();
     let encryptor = age::Encryptor::with_recipients(recipient_refs.into_iter())?;
 
@@ -180,16 +180,16 @@ pub fn decrypt_passphrase(
 
 pub fn parse_recipient(
     s: &str,
-) -> Result<Box<dyn::age::Recipient + Send>, Box<dyn std::error::Error>> {
+) -> Result<Box<dyn ::age::Recipient + Send>, Box<dyn std::error::Error>> {
     let recipient: age::x25519::Recipient = s.parse()?;
     Ok(Box::new(recipient))
 }
 
 pub fn parse_recipients_file(
     path: &Path,
-) -> Result<Vec<Box<dyn::age::Recipient + Send>>, Box<dyn std::error::Error>> {
+) -> Result<Vec<Box<dyn ::age::Recipient + Send>>, Box<dyn std::error::Error>> {
     let content = std::fs::read_to_string(path)?;
-    let mut recipients: Vec<Box<dyn::age::Recipient + Send>> = vec![];
+    let mut recipients: Vec<Box<dyn ::age::Recipient + Send>> = vec![];
 
     for line in content.lines() {
         let line = line.trim();
@@ -216,7 +216,7 @@ fn read_input(path: Option<&Path>) -> Result<Vec<u8>, Box<dyn std::error::Error>
 
 fn write_output(path: Option<&Path>, data: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
     match path {
-        Some(p) => Ok(std::fs::write(p, data)?),
+        Some(p) => Ok(crate::seed::write_secure(p, data)?),
         None => Ok(std::io::stdout().write_all(data)?),
     }
 }

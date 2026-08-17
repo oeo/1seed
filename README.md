@@ -41,7 +41,7 @@ echo "secret" | 1seed age encrypt  # Encrypt to self
 
 ## Seed Storage
 
-**Priority**: `SEED_FILE` env → OS keyring → `~/.1seed`.
+**Priority**: `--seed-file` flag → `SEED_FILE` env → OS keyring → `~/.1seed`.
 
 1seed uses OS-native credential stores (Keychain, Secret Service, Credential Manager) where available. If unavailable, it automatically falls back to `~/.1seed` (mode 0600).
 
@@ -52,6 +52,8 @@ SEED_FILE=/path/to/seed 1seed age pub
 # Set default realm
 export SEED_REALM=work
 ```
+
+**Storage format**: `init` stores the 32-byte derived master seed prefixed with the magic bytes `1SED2`. File fallback writes mode 0600. Seeds written before this header existed are still readable: a seed with no header is interpreted exactly as before (raw 32-byte binary, or passphrase text). Derived keys are unchanged when re-running `init` with the same passphrase — except one legacy case: passphrases of 32+ bytes containing non-ASCII characters were previously misread as raw binary; re-initializing such a seed changes its derived keys.
 
 ## Commands
 
@@ -71,10 +73,10 @@ export SEED_REALM=work
 
 ### Derivation
 - `1seed derive password SITE [-l 16] [-n 1]` : Site-specific passwords.
-- `1seed derive int PATH [--min 0] [--max 100]` : Deterministic integers.
+- `1seed derive int PATH [--min 0] [--max 2147483647]` : Deterministic integers.
 - `1seed derive uuid PATH` : Deterministic UUIDs.
 - `1seed derive mnemonic [-w 24]` : BIP39 word phrases.
-- `1seed derive raw PATH [--hex | --base64]` : Deterministic raw bytes.
+- `1seed derive raw PATH [-l 32] [--hex | --base64 | --binary]` : Deterministic raw bytes (max 8160).
 
 ## Realms
 Realms namespace all derived keys. Same seed, different realm = different keys.
@@ -88,12 +90,13 @@ export SEED_REALM=personal
 
 **Single Point of Failure**: The seed is the "Master Key". If it leaks, everything derived from it is compromised. 1seed trades N secrets for one well-protected secret.
 
-- **Storage**: Uses hardware-backed keychain where available (Secure Enclave, TPM).
+- **Storage**: Uses OS-native credential stores (Keychain, Secret Service, Credential Manager) where available. These are software credential stores, not hardware-backed (no Secure Enclave or TPM); treat the stored seed with the same care as a password file.
 - **KDF**: HKDF-SHA256 for derivation; scrypt for passphrases (~1GB RAM).
-- **Memory**: Keys are zeroized when dropped.
+- **Memory**: Derived keys are zeroized when dropped.
 
 ## Version History
 
+- **v0.8.0**: Added `--seed-file`, upgraded age to 0.12, refreshed audited dependencies
 - **v0.7.0**: Upgraded age crate to 0.11, expanded age encryption test coverage
 - **v0.6.0**: Removed self-update, added man page and fuzz targets
 - **v0.5.2**: Code formatting fixes

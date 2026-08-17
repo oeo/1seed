@@ -302,7 +302,7 @@ fn mnemonic_word_counts() {
         assert!(out.status.success());
 
         let mnemonic = String::from_utf8_lossy(&out.stdout);
-        let count = mnemonic.trim().split_whitespace().count();
+        let count = mnemonic.split_whitespace().count();
         assert_eq!(count, words, "expected {words} words, got {count}");
     }
 }
@@ -319,7 +319,7 @@ fn derive_integer_range() {
 
     assert!(out.status.success());
     let val: i64 = String::from_utf8_lossy(&out.stdout).trim().parse().unwrap();
-    assert!(val >= 10 && val <= 20);
+    assert!((10..=20).contains(&val));
 }
 
 #[test]
@@ -335,4 +335,133 @@ fn derive_uuid_format() {
     // Check basic format xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
     let parts: Vec<&str> = uuid.split('-').collect();
     assert_eq!(parts.len(), 5);
+}
+
+fn init_cmd(dir: &std::path::Path) -> Command {
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_1seed"));
+    cmd.env("ONESEED_TEST_MODE", "1");
+    cmd.env("SEED_NO_KEYRING", "1");
+    cmd.env("HOME", dir);
+    cmd
+}
+
+#[test]
+fn init_generate_stores_magic_seed() {
+    let dir = tempfile::TempDir::new().unwrap();
+    let seed_path = dir.path().join(".1seed");
+
+    let out = init_cmd(dir.path())
+        .arg("init")
+        .arg("--generate")
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+
+    let bytes = std::fs::read(&seed_path).unwrap();
+    assert!(bytes.starts_with(b"1SED2"));
+    assert_eq!(bytes.len(), 37);
+
+    // 0600 even under a permissive umask
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mode = std::fs::metadata(&seed_path).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode, 0o600);
+    }
+}
+
+#[test]
+fn init_from_magic_file_rejected() {
+    let dir = tempfile::TempDir::new().unwrap();
+    let src = dir.path().join("seed.bin");
+    let mut blob = Vec::from(&b"1SED2"[..]);
+    blob.extend_from_slice(&[0u8; 32]);
+    std::fs::write(&src, &blob).unwrap();
+
+    let out = init_cmd(dir.path())
+        .arg("init")
+        .arg("--from-file")
+        .arg(&src)
+        .output()
+        .unwrap();
+    assert!(!out.status.success());
+    assert!(String::from_utf8_lossy(&out.stderr).contains("already a stored seed"));
+}
+
+#[test]
+fn init_from_utf8_passphrase_scrypts() {
+    let dir = tempfile::TempDir::new().unwrap();
+    let src = dir.path().join("pass.txt");
+    let pass = "my secret passphrase that is longer than 32 bytes";
+    assert!(pass.len() >= 32);
+    std::fs::write(&src, pass).unwrap();
+
+    let out = init_cmd(dir.path())
+        .arg("init")
+        .arg("--from-file")
+        .arg(&src)
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+
+    let bytes = std::fs::read(dir.path().join(".1seed")).unwrap();
+    assert!(bytes.starts_with(b"1SED2"));
+    assert_eq!(bytes.len(), 37);
+
+    // derived key equals scrypt-of-passphrase, not raw first-32-bytes
+    let cmd = Command::new(env!("CARGO_BIN_EXE_1seed"))
+        .env("ONESEED_TEST_MODE", "1")
+        .env("SEED_FILE", dir.path().join(".1seed"))
+        .args(["--realm", "default", "age", "pub"])
+        .output()
+        .unwrap();
+    assert!(cmd.status.success());
+}
+
+#[test]
+fn derive_raw_too_long_errors() {
+    let ctx = TestContext::new();
+
+    let out = ctx
+        .cmd()
+        .args(["derive", "raw", "test", "-l", "9000"])
+        .output()
+        .unwrap();
+    assert!(!out.status.success());
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(stderr.contains("8160"), "unexpected stderr: {stderr}");
+}
+
+#[test]
+fn derive_integer_full_range() {
+    let ctx = TestContext::new();
+
+    let out = ctx
+        .cmd()
+        .args([
+            "derive",
+            "int",
+            "test",
+            "--min=-9223372036854775808",
+            "--max=9223372036854775807",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    String::from_utf8_lossy(&out.stdout)
+        .trim()
+        .parse::<i64>()
+        .unwrap();
 }

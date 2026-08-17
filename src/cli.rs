@@ -19,16 +19,19 @@ use crate::{age, derive, password, sign, ssh};
     echo secret | 1seed age encrypt  Encrypt to self
     1seed derive password github.com Derive password
 
-ENVIRONMENT:
-    SEED_FILE        Override: use specific file
-    SEED_NO_KEYRING  Use ~/.1seed only (bypass keyring)
-    SEED_REALM       Default realm (default: \"default\")
+FLAGS / ENVIRONMENT:
+    --seed-file          Seed file path (takes precedence over SEED_FILE)
+    SEED_NO_KEYRING      Use ~/.1seed only (bypass keyring)
+    --realm              Default realm (takes precedence over SEED_REALM)
 
 STORAGE:
-    Priority: SEED_FILE > keyring > ~/.1seed > prompt
+    Priority: flag > env > keyring > ~/.1seed
     Keyring: macOS Keychain, Linux Secret Service, Windows Credential Manager
 ")]
 pub struct Cli {
+    #[arg(long)]
+    pub seed_file: Option<PathBuf>,
+
     #[arg(long, global = true, env = "SEED_REALM")]
     pub realm: Option<String>,
 
@@ -239,7 +242,10 @@ impl Cli {
     }
 }
 
-fn get_seed(_cli: &Cli) -> Result<(Seed, SeedSource), Box<dyn std::error::Error>> {
+fn get_seed(cli: &Cli) -> Result<(Seed, SeedSource), Box<dyn std::error::Error>> {
+    if let Some(ref path) = cli.seed_file {
+        return Ok((Seed::from_file(path)?, SeedSource::EnvFile(path.clone())));
+    }
     Seed::load()
 }
 
@@ -353,7 +359,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
 
                 if *binary {
                     if let Some(path) = output {
-                        std::fs::write(path, &sig)?;
+                        crate::seed::write_secure(path, &sig)?;
                     } else {
                         std::io::stdout().write_all(&sig)?;
                     }
@@ -361,7 +367,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                     use base64::Engine;
                     let encoded = base64::engine::general_purpose::STANDARD.encode(&sig);
                     if let Some(path) = output {
-                        std::fs::write(path, &encoded)?;
+                        crate::seed::write_secure(path, encoded.as_bytes())?;
                     } else {
                         println!("{encoded}");
                     }
@@ -432,10 +438,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
 
             DeriveAction::Int { path, min, max } => {
                 let (seed, _) = get_seed(&cli)?;
-                match derive::integer(&seed, &realm, path, *min, *max) {
-                    Ok(val) => println!("{val}"),
-                    Err(e) => return Err(e),
-                }
+                println!("{}", derive::integer(&seed, &realm, path, *min, *max)?);
             }
 
             DeriveAction::Uuid { path } => {
@@ -451,7 +454,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 binary,
             } => {
                 let (seed, _) = get_seed(&cli)?;
-                let bytes = derive::raw(&seed, &realm, path, *length);
+                let bytes = derive::raw(&seed, &realm, path, *length)?;
 
                 if *binary {
                     std::io::stdout().write_all(&bytes)?;
@@ -476,14 +479,27 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 return Err("seed already exists, run '1seed forget --confirm' first".into());
             }
 
-            let seed_data = if generate {
+            let master = if generate {
                 let mut bytes = [0u8; 32];
-                use std::fs::File;
-                use std::io::Read;
-                File::open("/dev/urandom")?.read_exact(&mut bytes)?;
-                bytes.to_vec()
+                getrandom::getrandom(&mut bytes)?;
+                bytes
             } else if let Some(path) = from_file {
-                std::fs::read(path)?
+                let bytes = std::fs::read(path)?;
+                if bytes.starts_with(crate::seed::MAGIC) {
+                    return Err(
+                        "file is already a stored seed; use --passphrase or re-import the raw seed"
+                            .into(),
+                    );
+                }
+                if bytes.len() == 32 {
+                    let mut m = [0u8; 32];
+                    m.copy_from_slice(&bytes);
+                    m
+                } else if std::str::from_utf8(&bytes).is_ok() {
+                    Seed::master_from_passphrase(std::str::from_utf8(&bytes).unwrap())?
+                } else {
+                    return Err("seed file must be 32 raw bytes or a UTF-8 text passphrase".into());
+                }
             } else if passphrase {
                 eprint!("passphrase: ");
                 std::io::stderr().flush()?;
@@ -494,12 +510,12 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 if pass != confirm {
                     return Err("passphrases do not match".into());
                 }
-                pass.into_bytes()
+                Seed::master_from_passphrase(&pass)?
             } else {
                 return Err("must specify --passphrase, --generate, or --from-file".into());
             };
 
-            Seed::store(&seed_data)?;
+            Seed::store(&master)?;
 
             match Seed::load() {
                 Ok((_, source)) => {
