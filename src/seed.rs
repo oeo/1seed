@@ -2,6 +2,7 @@ use hkdf::Hkdf;
 use keyring::Entry;
 use scrypt::{scrypt, Params};
 use sha2::Sha256;
+#[cfg(unix)]
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use zeroize::{Zeroize, Zeroizing};
