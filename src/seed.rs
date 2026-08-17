@@ -2,12 +2,15 @@ use hkdf::Hkdf;
 use keyring::Entry;
 use scrypt::{scrypt, Params};
 use sha2::Sha256;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use zeroize::{Zeroize, Zeroizing};
 
 const SCRYPT_R: u32 = 8;
 const SCRYPT_P: u32 = 1;
 const VERSION: &str = "v1";
+pub(crate) const MAGIC: &[u8] = b"1SED2";
+const MASTER_LEN: usize = 32;
 
 pub struct Seed {
     master: Zeroizing<[u8; 32]>,
@@ -38,10 +41,16 @@ impl Seed {
         Ok(Self { master })
     }
 
+    pub fn master_from_passphrase(
+        passphrase: &str,
+    ) -> Result<[u8; 32], Box<dyn std::error::Error>> {
+        Ok(*Seed::from_passphrase(passphrase.trim())?.master)
+    }
+
     fn from_bytes(bytes: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
-        if bytes.len() >= 32 && bytes.iter().any(|&b| !(32..=127).contains(&b)) {
+        if bytes.len() >= MASTER_LEN && bytes.iter().any(|&b| !(32..=127).contains(&b)) {
             let mut master = Zeroizing::new([0u8; 32]);
-            master.copy_from_slice(&bytes[..32]);
+            master.copy_from_slice(&bytes[..MASTER_LEN]);
             Ok(Self { master })
         } else {
             let passphrase = String::from_utf8_lossy(bytes);
@@ -50,9 +59,28 @@ impl Seed {
         }
     }
 
+    fn decode_storage(bytes: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
+        if bytes.len() == MAGIC.len() + MASTER_LEN && bytes.starts_with(MAGIC) {
+            let mut master = Zeroizing::new([0u8; 32]);
+            master.copy_from_slice(&bytes[MAGIC.len()..]);
+            return Ok(Self { master });
+        }
+        if bytes.starts_with(MAGIC) && bytes.len() < MAGIC.len() + MASTER_LEN {
+            return Err("seed file appears truncated".into());
+        }
+        Self::from_bytes(bytes)
+    }
+
+    fn encode_master(master: &[u8; 32]) -> Vec<u8> {
+        let mut out = Vec::with_capacity(MAGIC.len() + MASTER_LEN);
+        out.extend_from_slice(MAGIC);
+        out.extend_from_slice(master);
+        out
+    }
+
     pub fn from_file(path: &Path) -> Result<Self, Box<dyn std::error::Error>> {
         let bytes = std::fs::read(path)?;
-        Self::from_bytes(&bytes)
+        Self::decode_storage(&bytes)
     }
 
     pub fn load() -> Result<(Self, SeedSource), Box<dyn std::error::Error>> {
@@ -83,35 +111,22 @@ impl Seed {
     fn from_keyring() -> Result<Self, Box<dyn std::error::Error>> {
         let entry = Entry::new("1seed", "master-seed")?;
         let bytes = entry.get_secret()?;
-        Self::from_bytes(&bytes)
+        Self::decode_storage(&bytes)
     }
 
-    pub fn store(data: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn store(master: &[u8; 32]) -> Result<(), Box<dyn std::error::Error>> {
+        let data = Self::encode_master(master);
         let use_file_only = std::env::var("SEED_NO_KEYRING").is_ok();
 
         if use_file_only {
-            let path = Self::default_file_path();
-            std::fs::write(&path, data)?;
-            #[cfg(unix)]
-            {
-                use std::fs::Permissions;
-                use std::os::unix::fs::PermissionsExt;
-                std::fs::set_permissions(&path, Permissions::from_mode(0o600))?;
-            }
+            write_secure(&Self::default_file_path(), &data)?;
             return Ok(());
         }
 
-        match Entry::new("1seed", "master-seed").and_then(|e| e.set_secret(data)) {
+        match Entry::new("1seed", "master-seed").and_then(|e| e.set_secret(&data)) {
             Ok(()) => Ok(()),
             Err(_) => {
-                let path = Self::default_file_path();
-                std::fs::write(&path, data)?;
-                #[cfg(unix)]
-                {
-                    use std::fs::Permissions;
-                    use std::os::unix::fs::PermissionsExt;
-                    std::fs::set_permissions(&path, Permissions::from_mode(0o600))?;
-                }
+                write_secure(&Self::default_file_path(), &data)?;
                 Ok(())
             }
         }
@@ -178,6 +193,26 @@ impl Drop for Seed {
     fn drop(&mut self) {
         self.master.zeroize();
     }
+}
+
+#[cfg(unix)]
+pub(crate) fn write_secure(path: &Path, data: &[u8]) -> std::io::Result<()> {
+    use std::fs::{OpenOptions, Permissions};
+    use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
+
+    let mut f = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .mode(0o600)
+        .open(path)?;
+    f.set_permissions(Permissions::from_mode(0o600))?;
+    f.write_all(data)
+}
+
+#[cfg(not(unix))]
+pub(crate) fn write_secure(path: &Path, data: &[u8]) -> std::io::Result<()> {
+    std::fs::write(path, data)
 }
 
 #[cfg(test)]
@@ -268,5 +303,67 @@ mod tests {
         let from_derive_32 = seed.derive_32("realm", "age");
 
         assert_eq!(from_derive.as_slice(), from_derive_32.as_slice());
+    }
+
+    #[test]
+    fn encode_master_roundtrip() {
+        let master = [0x5au8; 32];
+        let blob = Seed::encode_master(&master);
+        assert_eq!(blob.len(), MAGIC.len() + MASTER_LEN);
+        assert!(blob.starts_with(MAGIC));
+
+        let seed = Seed::decode_storage(&blob).unwrap();
+        assert_eq!(*seed.master, master);
+    }
+
+    #[test]
+    fn decode_storage_truncated_magic_errors() {
+        let blob = Seed::encode_master(&[0u8; 32]);
+        assert!(Seed::decode_storage(&blob[..blob.len() - 1]).is_err());
+    }
+
+    #[test]
+    fn legacy_passphrase_parity() {
+        // ASCII passphrase without header derives identical keys to pre-change behavior
+        let legacy = Seed::from_bytes(b"my secret passphrase").unwrap();
+        let new = Seed::decode_storage(b"my secret passphrase").unwrap();
+
+        assert_eq!(
+            legacy.derive("realm", "age", 32).as_slice(),
+            new.derive("realm", "age", 32).as_slice()
+        );
+    }
+
+    #[test]
+    fn legacy_raw_binary_parity() {
+        // raw >=32B with non-ascii, no header: same as before
+        let mut raw = [0u8; 40];
+        raw[0] = 0xFF;
+        let legacy = Seed::from_bytes(&raw).unwrap();
+        let new = Seed::decode_storage(&raw).unwrap();
+
+        assert_eq!(
+            legacy.derive("realm", "age", 32).as_slice(),
+            new.derive("realm", "age", 32).as_slice()
+        );
+    }
+
+    #[test]
+    fn non_ascii_passphrase_uses_scrypt() {
+        // h1 regression: a >=32B passphrase containing a non-ascii byte must NOT be
+        // treated as raw binary master. decode_storage without a header routes through
+        // the legacy sniff (still raw), but init stores an encoded master derived via
+        // scrypt. Verify the two representations agree:
+        let pass = "correct horse battery staple and secure è"; // >= 32 bytes, non-ascii
+        assert!(pass.len() >= 32);
+        let master = Seed::master_from_passphrase(pass).unwrap();
+        let blob = Seed::encode_master(&master);
+
+        let via_scrypt = Seed::from_passphrase(pass.trim()).unwrap();
+        let via_blob = Seed::decode_storage(&blob).unwrap();
+        assert_eq!(*via_blob.master, *via_scrypt.master);
+        // and it must NOT equal the raw first-32-bytes interpretation
+        let raw_master = Seed::from_bytes(pass.as_bytes()).unwrap();
+        assert_ne!(*via_blob.master, *raw_master.master);
     }
 }

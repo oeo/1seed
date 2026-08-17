@@ -1,9 +1,18 @@
 use crate::seed::Seed;
 use zeroize::Zeroizing;
 
-pub fn raw(seed: &Seed, realm: &str, path: &str, length: usize) -> Zeroizing<Vec<u8>> {
+pub fn raw(
+    seed: &Seed,
+    realm: &str,
+    path: &str,
+    length: usize,
+) -> Result<Zeroizing<Vec<u8>>, Box<dyn std::error::Error>> {
+    if length > 8160 {
+        return Err("raw length must be at most 8160 bytes".into());
+    }
+
     let key_type = format!("raw/{path}");
-    seed.derive(realm, &key_type, length)
+    Ok(seed.derive(realm, &key_type, length))
 }
 
 pub fn mnemonic(
@@ -39,12 +48,14 @@ pub fn integer(
 
     let range = (max as i128 - min as i128 + 1) as u128;
 
-    // We need enough bytes to cover the range.
-    // 8 bytes (u64) covers up to 1.8e19, which fits i64 range.
-    // To be perfectly uniform via rejection sampling or unbiased modulo,
-    // we take 8 bytes chunks.
-
     let key_type = format!("int/{path}");
+
+    // Full i64 domain: u64 sample maps directly onto the range.
+    if range == 1u128 << 64 {
+        let bytes = seed.derive(realm, &key_type, 8);
+        let val = u64::from_be_bytes(bytes[..8].try_into().unwrap());
+        return Ok((min as i128 + val as i128) as i64);
+    }
 
     // We derive a long stream to have enough attempts for rejection sampling
     // 256 bytes = 32 attempts of u64, highly unlikely to fail all.
@@ -130,7 +141,7 @@ mod tests {
         let seed = Seed::from_passphrase("test").unwrap();
         for i in 0..100 {
             let val = integer(&seed, "realm", &format!("count{i}"), 10, 20).unwrap();
-            assert!(val >= 10 && val <= 20);
+            assert!((10..=20).contains(&val));
         }
     }
 
@@ -167,8 +178,8 @@ mod tests {
     #[test]
     fn raw_deterministic() {
         let seed = Seed::from_passphrase("test").unwrap();
-        let r1 = raw(&seed, "realm", "key", 32);
-        let r2 = raw(&seed, "realm", "key", 32);
+        let r1 = raw(&seed, "realm", "key", 32).unwrap();
+        let r2 = raw(&seed, "realm", "key", 32).unwrap();
         assert_eq!(r1.as_slice(), r2.as_slice());
     }
 
@@ -176,8 +187,14 @@ mod tests {
     fn raw_respects_length() {
         let seed = Seed::from_passphrase("test").unwrap();
         for len in [1, 16, 32, 64, 128] {
-            assert_eq!(raw(&seed, "realm", "key", len).len(), len);
+            assert_eq!(raw(&seed, "realm", "key", len).unwrap().len(), len);
         }
+    }
+
+    #[test]
+    fn raw_rejects_too_long() {
+        let seed = Seed::from_passphrase("test").unwrap();
+        assert!(raw(&seed, "realm", "key", 9000).is_err());
     }
 
     #[test]
@@ -205,6 +222,6 @@ mod tests {
     fn integer_negative_range() {
         let seed = Seed::from_passphrase("test").unwrap();
         let val = integer(&seed, "realm", "x", -100, -50).unwrap();
-        assert!(val >= -100 && val <= -50);
+        assert!((-100..=-50).contains(&val));
     }
 }
