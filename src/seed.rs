@@ -25,7 +25,10 @@ pub enum SeedSource {
 
 impl Seed {
     fn default_file_path() -> PathBuf {
-        dirs::home_dir()
+        std::env::var_os("HOME")
+            .filter(|home| !home.is_empty())
+            .map(PathBuf::from)
+            .or_else(dirs::home_dir)
             .unwrap_or_else(|| PathBuf::from("."))
             .join(".1seed")
     }
