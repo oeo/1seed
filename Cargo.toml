@@ -7,6 +7,7 @@ description = "Deterministic cryptographic keys from a single seed"
 repository = "https://github.com/oeo/1seed"
 keywords = ["cryptography", "age", "ssh", "keys", "deterministic"]
 categories = ["command-line-utilities", "cryptography"]
+exclude = [".agents/"]
 
 [[bin]]
 name = "1seed"
