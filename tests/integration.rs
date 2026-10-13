@@ -220,6 +220,46 @@ fn sign_verify_roundtrip() {
 }
 
 #[test]
+fn sign_output_file_verifies() {
+    let ctx = TestContext::new();
+    let dir = ctx._dir.path();
+    let data = dir.join("data");
+    std::fs::write(&data, b"data to sign").unwrap();
+
+    let verify = |sig: &std::path::Path| {
+        ctx.cmd()
+            .args(["sign", "verify", &format!("@{}", sig.display())])
+            .arg(&data)
+            .output()
+            .unwrap()
+    };
+
+    for (name, flags) in [("sig.b64", vec![]), ("sig.bin", vec!["--binary"])] {
+        let sig = dir.join(name);
+        let out = ctx
+            .cmd()
+            .args(["sign", "data", "-o"])
+            .arg(&sig)
+            .args(flags)
+            .arg(&data)
+            .output()
+            .unwrap();
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        assert!(verify(&sig).status.success(), "{name} did not verify");
+    }
+
+    let junk = dir.join("junk");
+    std::fs::write(&junk, b"not a signature").unwrap();
+    let out = verify(&junk);
+    assert!(!out.status.success());
+    assert!(String::from_utf8_lossy(&out.stderr).contains("64 raw bytes or base64 text"));
+}
+
+#[test]
 fn verify_fails_wrong_data() {
     let ctx = TestContext::new();
 

@@ -380,10 +380,18 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 ref pubkey,
                 ref file,
             } => {
+                use base64::Engine;
                 let sig_bytes = if let Some(path) = signature.strip_prefix('@') {
-                    std::fs::read(path)?
+                    let bytes = std::fs::read(path)?;
+                    // `sign data -o` writes base64 text, `--binary -o` the raw 64 bytes
+                    if bytes.len() == 64 {
+                        bytes
+                    } else {
+                        base64::engine::general_purpose::STANDARD
+                            .decode(bytes.trim_ascii())
+                            .map_err(|_| "signature file must be 64 raw bytes or base64 text")?
+                    }
                 } else {
-                    use base64::Engine;
                     base64::engine::general_purpose::STANDARD.decode(signature)?
                 };
 
