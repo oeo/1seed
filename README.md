@@ -8,7 +8,7 @@ Deterministic cryptographic keys (and other derivations) from a single seed.
 
 ## What This Does
 
-- Stores seed in the OS keychain (macOS, Windows) or in ~/.1seed (Linux, and as a fallback)
+- Stores seed in the OS keychain (macOS, Windows) or in ~/.1seed (Linux, or with `SEED_NO_KEYRING=1`)
 - Derives age, SSH, and signing keys from one master secret
 - Encrypts and decrypts files using age
 - Signs and verifies data using Ed25519
@@ -43,7 +43,7 @@ echo "secret" | 1seed age encrypt  # Encrypt to self
 
 **Priority**: `--seed-file` flag → `SEED_FILE` env → OS keyring → `~/.1seed`.
 
-On macOS and Windows, 1seed uses the OS-native credential store (Keychain, Credential Manager). If it is unavailable, 1seed falls back to `~/.1seed` (mode 0600).
+On macOS and Windows, 1seed uses the OS-native credential store (Keychain, Credential Manager). If the store cannot be reached, `init` stops with an error, `forget` removes `~/.1seed` and then reports that a seed may remain in the store, and other commands read an existing `~/.1seed` with a warning. Set `SEED_NO_KEYRING=1` to store and read the seed in `~/.1seed` (mode 0600) only; `forget` still tries both places.
 
 On Linux, `init` always stores the seed in `~/.1seed` (mode 0600). Earlier versions stored it in the kernel keyring, which does not survive a reboot; a seed still held there is copied to `~/.1seed` the next time it is loaded.
 

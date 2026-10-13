@@ -476,7 +476,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             generate,
             from_file,
         } => {
-            if Seed::exists() {
+            if Seed::exists()? {
                 return Err("seed already exists, run '1seed forget --confirm' first".into());
             }
 
@@ -577,8 +577,8 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
 
                     print!("  sign: {}", sign::derive_public(&seed, &realm));
                 }
-                Err(_) => {
-                    print!("seed: none");
+                Err(e) => {
+                    print!("seed: none ({e})");
                 }
             }
         }
