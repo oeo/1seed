@@ -34,11 +34,10 @@ impl Seed {
     }
 
     pub fn from_passphrase(passphrase: &str) -> Result<Self, Box<dyn std::error::Error>> {
-        let scrypt_n = if cfg!(test) || std::env::var("ONESEED_TEST_MODE").is_ok() {
-            12
-        } else {
-            20
-        };
+        if passphrase.is_empty() {
+            return Err("passphrase must not be empty".into());
+        }
+        let scrypt_n = if cfg!(test) { 12 } else { 20 };
         let params = Params::new(scrypt_n, SCRYPT_R, SCRYPT_P, 32)?;
         let mut master = Zeroizing::new([0u8; 32]);
         scrypt(passphrase.as_bytes(), b"1seed", &params, master.as_mut())?;
@@ -53,6 +52,17 @@ impl Seed {
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
         if bytes.len() >= MASTER_LEN && bytes.iter().any(|&b| !(32..=127).contains(&b)) {
+            // Text this long was historically read as a raw key, skipping scrypt.
+            // A random key is almost never valid UTF-8, so refuse to guess.
+            if std::str::from_utf8(bytes).is_ok() {
+                return Err(
+                    "ambiguous legacy seed: text of 32+ bytes with a control or \
+                    non-ASCII character was read as a raw key. To keep the current keys, run \
+                    'init --from-file' on its first 32 bytes; to use it as a passphrase \
+                    (different keys), run 'init --passphrase'"
+                        .into(),
+                );
+            }
             let mut master = Zeroizing::new([0u8; 32]);
             master.copy_from_slice(&bytes[..MASTER_LEN]);
             Ok(Self { master })
@@ -64,13 +74,13 @@ impl Seed {
     }
 
     fn decode_storage(bytes: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
-        if bytes.len() == MAGIC.len() + MASTER_LEN && bytes.starts_with(MAGIC) {
+        if bytes.starts_with(MAGIC) {
+            if bytes.len() != MAGIC.len() + MASTER_LEN {
+                return Err("stored seed is corrupt: wrong length".into());
+            }
             let mut master = Zeroizing::new([0u8; 32]);
             master.copy_from_slice(&bytes[MAGIC.len()..]);
             return Ok(Self { master });
-        }
-        if bytes.starts_with(MAGIC) && bytes.len() < MAGIC.len() + MASTER_LEN {
-            return Err("seed file appears truncated".into());
         }
         Self::from_bytes(bytes)
     }
@@ -95,13 +105,26 @@ impl Seed {
 
         let use_file_only = std::env::var("SEED_NO_KEYRING").is_ok();
 
+        let default_file = Self::default_file_path();
+
         if !use_file_only {
-            if let Ok(seed) = Self::from_keyring() {
+            if let Ok(bytes) = Self::keyring_secret() {
+                let seed = Self::decode_storage(&bytes)?;
+                // The Linux keyring (kernel keyutils) does not survive a reboot:
+                // give seeds stored there by earlier versions a durable copy.
+                if cfg!(target_os = "linux") && !default_file.exists() {
+                    let data = Self::encode_master(&seed.master);
+                    if let Err(e) = write_secure(&default_file, &data) {
+                        eprintln!(
+                            "warning: seed exists only in the kernel keyring and could not be copied to {}: {e}",
+                            default_file.display()
+                        );
+                    }
+                }
                 return Ok((seed, SeedSource::Keyring));
             }
         }
 
-        let default_file = Self::default_file_path();
         if default_file.exists() {
             return Ok((
                 Self::from_file(&default_file)?,
@@ -112,15 +135,14 @@ impl Seed {
         Err("no seed found, run '1seed init --generate'".into())
     }
 
-    fn from_keyring() -> Result<Self, Box<dyn std::error::Error>> {
-        let entry = Entry::new("1seed", "master-seed")?;
-        let bytes = entry.get_secret()?;
-        Self::decode_storage(&bytes)
+    fn keyring_secret() -> keyring::Result<Vec<u8>> {
+        Entry::new("1seed", "master-seed")?.get_secret()
     }
 
     pub fn store(master: &[u8; 32]) -> Result<(), Box<dyn std::error::Error>> {
         let data = Self::encode_master(master);
-        let use_file_only = std::env::var("SEED_NO_KEYRING").is_ok();
+        // The Linux keyring (kernel keyutils) does not survive a reboot.
+        let use_file_only = cfg!(target_os = "linux") || std::env::var("SEED_NO_KEYRING").is_ok();
 
         if use_file_only {
             write_secure(&Self::default_file_path(), &data)?;
@@ -165,11 +187,7 @@ impl Seed {
 
         let use_file_only = std::env::var("SEED_NO_KEYRING").is_ok();
 
-        if !use_file_only
-            && Entry::new("1seed", "master-seed")
-                .and_then(|e| e.get_secret())
-                .is_ok()
-        {
+        if !use_file_only && Self::keyring_secret().is_ok() {
             return true;
         }
 
@@ -327,6 +345,27 @@ mod tests {
     }
 
     #[test]
+    fn decode_storage_magic_with_trailing_byte_errors() {
+        let mut blob = Seed::encode_master(&[0u8; 32]);
+        blob.push(b'\n');
+        assert!(Seed::decode_storage(&blob).is_err());
+    }
+
+    #[test]
+    fn decode_storage_empty_errors() {
+        assert!(Seed::decode_storage(b"").is_err());
+        assert!(Seed::decode_storage(b"  \n").is_err());
+    }
+
+    #[test]
+    fn decode_storage_long_text_with_newline_errors() {
+        // would otherwise load as its raw first 32 bytes, skipping scrypt
+        assert!(Seed::decode_storage(b"correct horse battery staple and more words\n").is_err());
+        // exactly 32 bytes: 31 characters plus the newline
+        assert!(Seed::decode_storage(b"thirty-one character passphrase\n").is_err());
+    }
+
+    #[test]
     fn legacy_passphrase_parity() {
         // ASCII passphrase without header derives identical keys to pre-change behavior
         let legacy = Seed::from_bytes(b"my secret passphrase").unwrap();
@@ -355,8 +394,7 @@ mod tests {
     #[test]
     fn non_ascii_passphrase_uses_scrypt() {
         // h1 regression: a >=32B passphrase containing a non-ascii byte must NOT be
-        // treated as raw binary master. decode_storage without a header routes through
-        // the legacy sniff (still raw), but init stores an encoded master derived via
+        // treated as raw binary master. init stores an encoded master derived via
         // scrypt. Verify the two representations agree:
         let pass = "correct horse battery staple and secure è"; // >= 32 bytes, non-ascii
         assert!(pass.len() >= 32);
@@ -366,8 +404,7 @@ mod tests {
         let via_scrypt = Seed::from_passphrase(pass.trim()).unwrap();
         let via_blob = Seed::decode_storage(&blob).unwrap();
         assert_eq!(*via_blob.master, *via_scrypt.master);
-        // and it must NOT equal the raw first-32-bytes interpretation
-        let raw_master = Seed::from_bytes(pass.as_bytes()).unwrap();
-        assert_ne!(*via_blob.master, *raw_master.master);
+        // and the headerless text is rejected, not read as its raw first 32 bytes
+        assert!(Seed::from_bytes(pass.as_bytes()).is_err());
     }
 }

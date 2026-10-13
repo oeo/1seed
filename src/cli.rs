@@ -13,7 +13,7 @@ use crate::{age, derive, password, sign, ssh};
     about = "Deterministic cryptographic keys from a single seed"
 )]
 #[command(after_help = "EXAMPLES:
-    1seed init                       Store seed in OS keychain
+    1seed init --generate            Create and store a seed
     1seed age pub                    Show age public key
     1seed --realm work ssh add       Add work SSH key to agent
     echo secret | 1seed age encrypt  Encrypt to self
@@ -26,7 +26,8 @@ FLAGS / ENVIRONMENT:
 
 STORAGE:
     Priority: flag > env > keyring > ~/.1seed
-    Keyring: macOS Keychain, Linux Secret Service, Windows Credential Manager
+    Keyring: macOS Keychain, Windows Credential Manager
+    Linux: init stores the seed in ~/.1seed (mode 0600)
 ")]
 pub struct Cli {
     #[arg(long)]
@@ -65,7 +66,7 @@ pub enum Commands {
         action: DeriveAction,
     },
 
-    /// Initialize: store seed in OS keychain
+    /// Initialize: store seed in OS keychain (~/.1seed on Linux)
     Init {
         #[arg(short, long)]
         passphrase: bool,
@@ -77,7 +78,7 @@ pub enum Commands {
         from_file: Option<PathBuf>,
     },
 
-    /// Remove seed from OS keychain
+    /// Remove seed from OS keychain and ~/.1seed
     Forget {
         #[arg(long)]
         confirm: bool,

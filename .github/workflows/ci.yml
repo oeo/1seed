@@ -56,8 +56,6 @@ jobs:
 
       - name: Test
         run: cargo test
-        env:
-          ONESEED_TEST_MODE: "1"
 
   audit:
     runs-on: ubuntu-latest

@@ -12,7 +12,10 @@ impl TestContext {
     fn new() -> Self {
         let _dir = TempDir::new().unwrap();
         let seed_file = _dir.path().join("seed");
-        std::fs::write(&seed_file, b"test seed phrase for integration tests").unwrap();
+        // stored-seed format, so spawned binaries never run production scrypt
+        let mut seed = b"1SED2".to_vec();
+        seed.extend_from_slice(&[7u8; 32]);
+        std::fs::write(&seed_file, seed).unwrap();
 
         // canonicalize to resolve any symlinks (important on macOS where /tmp -> /private/tmp)
         let seed_file = seed_file.canonicalize().unwrap();
@@ -35,7 +38,6 @@ impl TestContext {
 
     fn cmd_realm(&self, realm: &str) -> Command {
         let mut cmd = Command::new(env!("CARGO_BIN_EXE_1seed"));
-        cmd.env("ONESEED_TEST_MODE", "1");
         // use SEED_FILE env to override keyring for tests
         cmd.env("SEED_FILE", &self.seed_file);
         // always pass explicit realm
@@ -339,7 +341,6 @@ fn derive_uuid_format() {
 
 fn init_cmd(dir: &std::path::Path) -> Command {
     let mut cmd = Command::new(env!("CARGO_BIN_EXE_1seed"));
-    cmd.env("ONESEED_TEST_MODE", "1");
     cmd.env("SEED_NO_KEYRING", "1");
     cmd.env("HOME", dir);
     cmd
@@ -418,12 +419,76 @@ fn init_from_utf8_passphrase_scrypts() {
 
     // derived key equals scrypt-of-passphrase, not raw first-32-bytes
     let cmd = Command::new(env!("CARGO_BIN_EXE_1seed"))
-        .env("ONESEED_TEST_MODE", "1")
         .env("SEED_FILE", dir.path().join(".1seed"))
         .args(["--realm", "default", "age", "pub"])
         .output()
         .unwrap();
     assert!(cmd.status.success());
+}
+
+#[test]
+fn test_mode_env_does_not_weaken_kdf() {
+    let dir = tempfile::TempDir::new().unwrap();
+    let seed = dir.path().join("pass.txt");
+    std::fs::write(&seed, "short passphrase").unwrap();
+
+    let age_pub = |test_mode: bool| {
+        let mut cmd = Command::new(env!("CARGO_BIN_EXE_1seed"));
+        cmd.env("SEED_FILE", &seed)
+            .env_remove("ONESEED_TEST_MODE")
+            .args(["--realm", "default", "age", "pub"]);
+        if test_mode {
+            cmd.env("ONESEED_TEST_MODE", "1");
+        }
+        let out = cmd.output().unwrap();
+        assert!(out.status.success());
+        out.stdout
+    };
+
+    assert_eq!(age_pub(false), age_pub(true));
+}
+
+#[test]
+fn malformed_seed_files_rejected() {
+    let dir = tempfile::TempDir::new().unwrap();
+    let mut stored = b"1SED2".to_vec();
+    stored.extend_from_slice(&[7u8; 33]);
+
+    let cases: [(&str, &[u8]); 3] = [
+        ("empty", b""),
+        ("trailing", &stored),
+        ("text", b"correct horse battery staple and more words\n"),
+    ];
+    for (name, bytes) in cases {
+        let seed = dir.path().join(name);
+        std::fs::write(&seed, bytes).unwrap();
+        let out = Command::new(env!("CARGO_BIN_EXE_1seed"))
+            .env("SEED_FILE", &seed)
+            .args(["--realm", "default", "age", "pub"])
+            .output()
+            .unwrap();
+        assert!(!out.status.success(), "{name} seed was accepted");
+    }
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn init_on_linux_stores_seed_file_without_keyring_override() {
+    let dir = tempfile::TempDir::new().unwrap();
+
+    let out = Command::new(env!("CARGO_BIN_EXE_1seed"))
+        .env("HOME", dir.path())
+        .env_remove("SEED_NO_KEYRING")
+        .env_remove("SEED_FILE")
+        .args(["init", "--generate"])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert_eq!(std::fs::read(dir.path().join(".1seed")).unwrap().len(), 37);
 }
 
 #[test]

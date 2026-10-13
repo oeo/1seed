@@ -8,7 +8,7 @@ Deterministic cryptographic keys (and other derivations) from a single seed.
 
 ## What This Does
 
-- Stores seed securely in OS keychain with automatic fallback to ~/.1seed
+- Stores seed in the OS keychain (macOS, Windows) or in ~/.1seed (Linux, and as a fallback)
 - Derives age, SSH, and signing keys from one master secret
 - Encrypts and decrypts files using age
 - Signs and verifies data using Ed25519
@@ -43,7 +43,9 @@ echo "secret" | 1seed age encrypt  # Encrypt to self
 
 **Priority**: `--seed-file` flag → `SEED_FILE` env → OS keyring → `~/.1seed`.
 
-1seed uses OS-native credential stores (Keychain, Secret Service, Credential Manager) where available. If unavailable, it automatically falls back to `~/.1seed` (mode 0600).
+On macOS and Windows, 1seed uses the OS-native credential store (Keychain, Credential Manager). If it is unavailable, 1seed falls back to `~/.1seed` (mode 0600).
+
+On Linux, `init` always stores the seed in `~/.1seed` (mode 0600). Earlier versions stored it in the kernel keyring, which does not survive a reboot; a seed still held there is copied to `~/.1seed` the next time it is loaded.
 
 ```bash
 # Override seed location
@@ -53,7 +55,15 @@ SEED_FILE=/path/to/seed 1seed age pub
 export SEED_REALM=work
 ```
 
-**Storage format**: `init` stores the 32-byte derived master seed prefixed with the magic bytes `1SED2`. File fallback writes mode 0600. Seeds written before this header existed are still readable: a seed with no header is interpreted exactly as before (raw 32-byte binary, or passphrase text). Derived keys are unchanged when re-running `init` with the same passphrase — except one legacy case: passphrases of 32+ bytes containing non-ASCII characters were previously misread as raw binary; re-initializing such a seed changes its derived keys.
+**Storage format**: `init` stores the 32-byte derived master seed prefixed with the magic bytes `1SED2`. The seed file is written mode 0600. Seeds written before this header existed are still readable: a seed with no header is interpreted as before (raw binary, or passphrase text), with three exceptions that now fail with an error instead of deriving keys:
+
+- An empty seed, or an empty passphrase.
+- A seed that starts with `1SED2` but is not exactly 37 bytes.
+- UTF-8 text of 32 or more bytes that contains a control character (such as a trailing newline) or a non-ASCII character. Such a seed was previously read as a raw key from its first 32 bytes, skipping scrypt. To keep the same keys, run `1seed init --from-file` on a file holding those first 32 bytes. To use the text as a passphrase, run `1seed init --passphrase`; the derived keys will differ. `init` refuses while a seed exists or `SEED_FILE` is set: save a copy of the old seed first, then unset `SEED_FILE` and run `1seed forget --confirm` before `init`.
+
+If the rejected seed is in the OS keychain and a good `~/.1seed` exists, set `SEED_NO_KEYRING=1` to use the file.
+
+Passphrases always use the full scrypt cost. Earlier versions lowered it when the `ONESEED_TEST_MODE` environment variable was set. A passphrase seed file read with that variable set derives different keys now. A seed created by `init --passphrase` with that variable set keeps its keys, but was derived at the reduced cost and should be re-initialized.
 
 ## Commands
 
@@ -90,7 +100,7 @@ export SEED_REALM=personal
 
 **Single Point of Failure**: The seed is the "Master Key". If it leaks, everything derived from it is compromised. 1seed trades N secrets for one well-protected secret.
 
-- **Storage**: Uses OS-native credential stores (Keychain, Secret Service, Credential Manager) where available. These are software credential stores, not hardware-backed (no Secure Enclave or TPM); treat the stored seed with the same care as a password file.
+- **Storage**: Uses the OS-native credential store on macOS and Windows (Keychain, Credential Manager), and a mode 0600 file on Linux. These are software credential stores, not hardware-backed (no Secure Enclave or TPM); treat the stored seed with the same care as a password file.
 - **KDF**: HKDF-SHA256 for derivation; scrypt for passphrases (~1GB RAM).
 - **Memory**: Derived keys are zeroized when dropped.
 
