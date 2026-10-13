@@ -103,18 +103,25 @@ impl Seed {
             return Ok((Self::from_file(&path)?, SeedSource::EnvFile(path)));
         }
 
-        let keyring = if std::env::var("SEED_NO_KEYRING").is_ok() {
-            None
-        } else {
-            Self::keyring_secret().ok()
-        };
-        Self::load_stored(keyring, Self::default_file_path())
+        Self::load_stored(Self::keyring_secret(), Self::default_file_path())
     }
 
     fn load_stored(
-        keyring: Option<Vec<u8>>,
+        keyring: Result<Option<Vec<u8>>, Box<dyn std::error::Error>>,
         default_file: PathBuf,
     ) -> Result<(Self, SeedSource), Box<dyn std::error::Error>> {
+        let keyring = match keyring {
+            Err(e) if default_file.exists() => {
+                eprintln!("warning: {e}");
+                eprintln!(
+                    "warning: using {}, which may hold a different seed",
+                    default_file.display()
+                );
+                None
+            }
+            other => other?,
+        };
+
         if let Some(bytes) = keyring {
             let seed = Self::decode_storage(&bytes)?;
             // The Linux keyring (kernel keyutils) does not survive a reboot:
@@ -141,8 +148,19 @@ impl Seed {
         Err("no seed found, run '1seed init --generate'".into())
     }
 
-    fn keyring_secret() -> keyring::Result<Vec<u8>> {
-        Entry::new("1seed", "master-seed")?.get_secret()
+    fn keyring_secret() -> Result<Option<Vec<u8>>, Box<dyn std::error::Error>> {
+        if std::env::var("SEED_NO_KEYRING").is_ok() {
+            return Ok(None);
+        }
+        keyring_found(Entry::new("1seed", "master-seed").and_then(|e| e.get_secret())).map_err(
+            |e| {
+                format!(
+                    "keyring unavailable ({e}); a seed may be stored there. \
+                    Set SEED_NO_KEYRING=1 to ignore the keyring and use ~/.1seed only"
+                )
+                .into()
+            },
+        )
     }
 
     pub fn store(master: &[u8; 32]) -> Result<(), Box<dyn std::error::Error>> {
@@ -150,54 +168,50 @@ impl Seed {
         // The Linux keyring (kernel keyutils) does not survive a reboot.
         let use_file_only = cfg!(target_os = "linux") || std::env::var("SEED_NO_KEYRING").is_ok();
 
-        if !use_file_only
-            && Entry::new("1seed", "master-seed")
+        if use_file_only {
+            write_seed_file(&Self::default_file_path(), &data)?;
+        } else {
+            Entry::new("1seed", "master-seed")
                 .and_then(|e| e.set_secret(&data))
-                .is_ok()
-        {
-            return Ok(());
+                .map_err(|e| {
+                    format!(
+                        "keyring unavailable ({e}); seed not stored. \
+                        Set SEED_NO_KEYRING=1 to store it in ~/.1seed"
+                    )
+                })?;
         }
-
-        write_seed_file(&Self::default_file_path(), &data)?;
         Ok(())
     }
 
     pub fn remove() -> Result<(), Box<dyn std::error::Error>> {
-        let mut removed_any = false;
+        Self::remove_stored(
+            keyring_found(Entry::new("1seed", "master-seed").and_then(|e| e.delete_credential())),
+            &Self::default_file_path(),
+        )
+    }
 
-        if let Ok(entry) = Entry::new("1seed", "master-seed") {
-            if entry.delete_credential().is_ok() {
-                removed_any = true;
-            }
-        }
-
-        let default_file = Self::default_file_path();
-        if default_file.exists() {
-            std::fs::remove_file(&default_file)?;
-            removed_any = true;
+    fn remove_stored(
+        keyring: keyring::Result<Option<()>>,
+        default_file: &Path,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let removed_file = default_file.exists();
+        if removed_file {
+            std::fs::remove_file(default_file)?;
         }
         // A write killed midway can leave the temp file holding the seed.
         let _ = std::fs::remove_file(default_file.with_extension("tmp"));
 
-        if removed_any {
-            Ok(())
-        } else {
-            Err("no seed found to remove".into())
+        match keyring {
+            Err(e) => Err(format!("keyring unavailable ({e}); a seed may remain there").into()),
+            Ok(None) if !removed_file => Err("no seed found to remove".into()),
+            Ok(_) => Ok(()),
         }
     }
 
-    pub fn exists() -> bool {
-        if std::env::var("SEED_FILE").is_ok() {
-            return true;
-        }
-
-        let use_file_only = std::env::var("SEED_NO_KEYRING").is_ok();
-
-        if !use_file_only && Self::keyring_secret().is_ok() {
-            return true;
-        }
-
-        Self::default_file_path().exists()
+    pub fn exists() -> Result<bool, Box<dyn std::error::Error>> {
+        Ok(std::env::var("SEED_FILE").is_ok()
+            || Self::keyring_secret()?.is_some()
+            || Self::default_file_path().exists())
     }
 
     pub fn derive(&self, realm: &str, key_type: &str, length: usize) -> Zeroizing<Vec<u8>> {
@@ -241,6 +255,18 @@ pub(crate) fn write_secure(path: &Path, data: &[u8]) -> std::io::Result<()> {
 #[cfg(not(unix))]
 pub(crate) fn write_secure(path: &Path, data: &[u8]) -> std::io::Result<()> {
     std::fs::write(path, data)
+}
+
+/// Separates "no entry" from a keyring that could not be asked.
+fn keyring_found<T>(result: keyring::Result<T>) -> keyring::Result<Option<T>> {
+    match result {
+        Ok(value) => Ok(Some(value)),
+        Err(keyring::Error::NoEntry) => Ok(None),
+        // Linux never stores the seed in the keyring; only a seed left by an
+        // earlier version can be there.
+        Err(_) if cfg!(target_os = "linux") => Ok(None),
+        Err(e) => Err(e),
+    }
 }
 
 /// Writes the seed beside its target and renames it into place, so the
@@ -464,7 +490,7 @@ mod tests {
         let mut corrupt = Seed::encode_master(&[2u8; 32]);
         corrupt.push(0);
 
-        assert!(Seed::load_stored(Some(corrupt), path).is_err());
+        assert!(Seed::load_stored(Ok(Some(corrupt)), path).is_err());
     }
 
     #[cfg(target_os = "linux")]
@@ -474,7 +500,7 @@ mod tests {
         let path = dir.path().join(".1seed");
         let blob = Seed::encode_master(&[3u8; 32]);
 
-        let (seed, source) = Seed::load_stored(Some(blob.clone()), path.clone()).unwrap();
+        let (seed, source) = Seed::load_stored(Ok(Some(blob.clone())), path.clone()).unwrap();
 
         assert_eq!(*seed.master, [3u8; 32]);
         assert!(matches!(source, SeedSource::Keyring));
@@ -488,8 +514,98 @@ mod tests {
         let path = dir.path().join("missing").join(".1seed");
         let blob = Seed::encode_master(&[4u8; 32]);
 
-        let (seed, _) = Seed::load_stored(Some(blob), path).unwrap();
+        let (seed, _) = Seed::load_stored(Ok(Some(blob)), path).unwrap();
 
         assert_eq!(*seed.master, [4u8; 32]);
+    }
+
+    #[test]
+    fn keyring_found_separates_no_entry_from_failure() {
+        assert_eq!(keyring_found(Ok(1)).unwrap(), Some(1));
+        assert_eq!(
+            keyring_found::<u8>(Err(keyring::Error::NoEntry)).unwrap(),
+            None
+        );
+
+        let failed = keyring_found::<u8>(Err(keyring::Error::PlatformFailure("locked".into())));
+        if cfg!(target_os = "linux") {
+            assert_eq!(failed.unwrap(), None);
+        } else {
+            assert!(matches!(failed, Err(keyring::Error::PlatformFailure(_))));
+        }
+    }
+
+    fn seed_and_temp(dir: &tempfile::TempDir) -> (PathBuf, PathBuf) {
+        let path = dir.path().join(".1seed");
+        let temp = dir.path().join(".1seed.tmp");
+        std::fs::write(&path, Seed::encode_master(&[6u8; 32])).unwrap();
+        std::fs::write(&temp, b"partial").unwrap();
+        (path, temp)
+    }
+
+    #[test]
+    fn remove_stored_keyring_failure_removes_files_and_reports_it() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let (path, temp) = seed_and_temp(&dir);
+
+        let err = Seed::remove_stored(Err(keyring::Error::PlatformFailure("locked".into())), &path)
+            .unwrap_err();
+
+        assert!(err.to_string().contains("a seed may remain"));
+        assert!(!path.exists());
+        assert!(!temp.exists());
+    }
+
+    #[test]
+    fn remove_stored_no_entry_removes_files() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let (path, temp) = seed_and_temp(&dir);
+
+        Seed::remove_stored(Ok(None), &path).unwrap();
+
+        assert!(!path.exists());
+        assert!(!temp.exists());
+    }
+
+    #[test]
+    fn remove_stored_nothing_to_remove_errors() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let path = dir.path().join(".1seed");
+
+        let err = Seed::remove_stored(Ok(None), &path).unwrap_err();
+
+        assert_eq!(err.to_string(), "no seed found to remove");
+    }
+
+    #[test]
+    fn remove_stored_keyring_entry_alone_is_removed() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let path = dir.path().join(".1seed");
+
+        Seed::remove_stored(Ok(Some(())), &path).unwrap();
+    }
+
+    #[test]
+    fn load_stored_keyring_failure_uses_existing_file() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let path = dir.path().join(".1seed");
+        std::fs::write(&path, Seed::encode_master(&[5u8; 32])).unwrap();
+
+        let (seed, source) = Seed::load_stored(Err("keyring unavailable".into()), path).unwrap();
+
+        assert_eq!(*seed.master, [5u8; 32]);
+        assert!(matches!(source, SeedSource::DefaultFile(_)));
+    }
+
+    #[test]
+    fn load_stored_keyring_failure_without_file_reports_it() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let path = dir.path().join(".1seed");
+
+        let err = Seed::load_stored(Err("keyring unavailable".into()), path)
+            .err()
+            .unwrap();
+
+        assert_eq!(err.to_string(), "keyring unavailable");
     }
 }
