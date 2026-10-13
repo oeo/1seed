@@ -17,211 +17,211 @@ _1seed() {
                 cmd="1seed"
                 ;;
             1seed,age)
-                cmd="1seed__age"
+                cmd="1seed__subcmd__age"
                 ;;
             1seed,derive)
-                cmd="1seed__derive"
+                cmd="1seed__subcmd__derive"
                 ;;
             1seed,forget)
-                cmd="1seed__forget"
+                cmd="1seed__subcmd__forget"
                 ;;
             1seed,help)
-                cmd="1seed__help"
+                cmd="1seed__subcmd__help"
                 ;;
             1seed,init)
-                cmd="1seed__init"
+                cmd="1seed__subcmd__init"
                 ;;
             1seed,sign)
-                cmd="1seed__sign"
+                cmd="1seed__subcmd__sign"
                 ;;
             1seed,ssh)
-                cmd="1seed__ssh"
+                cmd="1seed__subcmd__ssh"
                 ;;
             1seed,status)
-                cmd="1seed__status"
+                cmd="1seed__subcmd__status"
                 ;;
-            1seed__age,decrypt)
-                cmd="1seed__age__decrypt"
+            1seed__subcmd__age,decrypt)
+                cmd="1seed__subcmd__age__subcmd__decrypt"
                 ;;
-            1seed__age,encrypt)
-                cmd="1seed__age__encrypt"
+            1seed__subcmd__age,encrypt)
+                cmd="1seed__subcmd__age__subcmd__encrypt"
                 ;;
-            1seed__age,help)
-                cmd="1seed__age__help"
+            1seed__subcmd__age,help)
+                cmd="1seed__subcmd__age__subcmd__help"
                 ;;
-            1seed__age,key)
-                cmd="1seed__age__key"
+            1seed__subcmd__age,key)
+                cmd="1seed__subcmd__age__subcmd__key"
                 ;;
-            1seed__age,pub)
-                cmd="1seed__age__pub"
+            1seed__subcmd__age,pub)
+                cmd="1seed__subcmd__age__subcmd__pub"
                 ;;
-            1seed__age__help,decrypt)
-                cmd="1seed__age__help__decrypt"
+            1seed__subcmd__age__subcmd__help,decrypt)
+                cmd="1seed__subcmd__age__subcmd__help__subcmd__decrypt"
                 ;;
-            1seed__age__help,encrypt)
-                cmd="1seed__age__help__encrypt"
+            1seed__subcmd__age__subcmd__help,encrypt)
+                cmd="1seed__subcmd__age__subcmd__help__subcmd__encrypt"
                 ;;
-            1seed__age__help,help)
-                cmd="1seed__age__help__help"
+            1seed__subcmd__age__subcmd__help,help)
+                cmd="1seed__subcmd__age__subcmd__help__subcmd__help"
                 ;;
-            1seed__age__help,key)
-                cmd="1seed__age__help__key"
+            1seed__subcmd__age__subcmd__help,key)
+                cmd="1seed__subcmd__age__subcmd__help__subcmd__key"
                 ;;
-            1seed__age__help,pub)
-                cmd="1seed__age__help__pub"
+            1seed__subcmd__age__subcmd__help,pub)
+                cmd="1seed__subcmd__age__subcmd__help__subcmd__pub"
                 ;;
-            1seed__derive,help)
-                cmd="1seed__derive__help"
+            1seed__subcmd__derive,help)
+                cmd="1seed__subcmd__derive__subcmd__help"
                 ;;
-            1seed__derive,int)
-                cmd="1seed__derive__int"
+            1seed__subcmd__derive,int)
+                cmd="1seed__subcmd__derive__subcmd__int"
                 ;;
-            1seed__derive,mnemonic)
-                cmd="1seed__derive__mnemonic"
+            1seed__subcmd__derive,mnemonic)
+                cmd="1seed__subcmd__derive__subcmd__mnemonic"
                 ;;
-            1seed__derive,password)
-                cmd="1seed__derive__password"
+            1seed__subcmd__derive,password)
+                cmd="1seed__subcmd__derive__subcmd__password"
                 ;;
-            1seed__derive,raw)
-                cmd="1seed__derive__raw"
+            1seed__subcmd__derive,raw)
+                cmd="1seed__subcmd__derive__subcmd__raw"
                 ;;
-            1seed__derive,uuid)
-                cmd="1seed__derive__uuid"
+            1seed__subcmd__derive,uuid)
+                cmd="1seed__subcmd__derive__subcmd__uuid"
                 ;;
-            1seed__derive__help,help)
-                cmd="1seed__derive__help__help"
+            1seed__subcmd__derive__subcmd__help,help)
+                cmd="1seed__subcmd__derive__subcmd__help__subcmd__help"
                 ;;
-            1seed__derive__help,int)
-                cmd="1seed__derive__help__int"
+            1seed__subcmd__derive__subcmd__help,int)
+                cmd="1seed__subcmd__derive__subcmd__help__subcmd__int"
                 ;;
-            1seed__derive__help,mnemonic)
-                cmd="1seed__derive__help__mnemonic"
+            1seed__subcmd__derive__subcmd__help,mnemonic)
+                cmd="1seed__subcmd__derive__subcmd__help__subcmd__mnemonic"
                 ;;
-            1seed__derive__help,password)
-                cmd="1seed__derive__help__password"
+            1seed__subcmd__derive__subcmd__help,password)
+                cmd="1seed__subcmd__derive__subcmd__help__subcmd__password"
                 ;;
-            1seed__derive__help,raw)
-                cmd="1seed__derive__help__raw"
+            1seed__subcmd__derive__subcmd__help,raw)
+                cmd="1seed__subcmd__derive__subcmd__help__subcmd__raw"
                 ;;
-            1seed__derive__help,uuid)
-                cmd="1seed__derive__help__uuid"
+            1seed__subcmd__derive__subcmd__help,uuid)
+                cmd="1seed__subcmd__derive__subcmd__help__subcmd__uuid"
                 ;;
-            1seed__help,age)
-                cmd="1seed__help__age"
+            1seed__subcmd__help,age)
+                cmd="1seed__subcmd__help__subcmd__age"
                 ;;
-            1seed__help,derive)
-                cmd="1seed__help__derive"
+            1seed__subcmd__help,derive)
+                cmd="1seed__subcmd__help__subcmd__derive"
                 ;;
-            1seed__help,forget)
-                cmd="1seed__help__forget"
+            1seed__subcmd__help,forget)
+                cmd="1seed__subcmd__help__subcmd__forget"
                 ;;
-            1seed__help,help)
-                cmd="1seed__help__help"
+            1seed__subcmd__help,help)
+                cmd="1seed__subcmd__help__subcmd__help"
                 ;;
-            1seed__help,init)
-                cmd="1seed__help__init"
+            1seed__subcmd__help,init)
+                cmd="1seed__subcmd__help__subcmd__init"
                 ;;
-            1seed__help,sign)
-                cmd="1seed__help__sign"
+            1seed__subcmd__help,sign)
+                cmd="1seed__subcmd__help__subcmd__sign"
                 ;;
-            1seed__help,ssh)
-                cmd="1seed__help__ssh"
+            1seed__subcmd__help,ssh)
+                cmd="1seed__subcmd__help__subcmd__ssh"
                 ;;
-            1seed__help,status)
-                cmd="1seed__help__status"
+            1seed__subcmd__help,status)
+                cmd="1seed__subcmd__help__subcmd__status"
                 ;;
-            1seed__help__age,decrypt)
-                cmd="1seed__help__age__decrypt"
+            1seed__subcmd__help__subcmd__age,decrypt)
+                cmd="1seed__subcmd__help__subcmd__age__subcmd__decrypt"
                 ;;
-            1seed__help__age,encrypt)
-                cmd="1seed__help__age__encrypt"
+            1seed__subcmd__help__subcmd__age,encrypt)
+                cmd="1seed__subcmd__help__subcmd__age__subcmd__encrypt"
                 ;;
-            1seed__help__age,key)
-                cmd="1seed__help__age__key"
+            1seed__subcmd__help__subcmd__age,key)
+                cmd="1seed__subcmd__help__subcmd__age__subcmd__key"
                 ;;
-            1seed__help__age,pub)
-                cmd="1seed__help__age__pub"
+            1seed__subcmd__help__subcmd__age,pub)
+                cmd="1seed__subcmd__help__subcmd__age__subcmd__pub"
                 ;;
-            1seed__help__derive,int)
-                cmd="1seed__help__derive__int"
+            1seed__subcmd__help__subcmd__derive,int)
+                cmd="1seed__subcmd__help__subcmd__derive__subcmd__int"
                 ;;
-            1seed__help__derive,mnemonic)
-                cmd="1seed__help__derive__mnemonic"
+            1seed__subcmd__help__subcmd__derive,mnemonic)
+                cmd="1seed__subcmd__help__subcmd__derive__subcmd__mnemonic"
                 ;;
-            1seed__help__derive,password)
-                cmd="1seed__help__derive__password"
+            1seed__subcmd__help__subcmd__derive,password)
+                cmd="1seed__subcmd__help__subcmd__derive__subcmd__password"
                 ;;
-            1seed__help__derive,raw)
-                cmd="1seed__help__derive__raw"
+            1seed__subcmd__help__subcmd__derive,raw)
+                cmd="1seed__subcmd__help__subcmd__derive__subcmd__raw"
                 ;;
-            1seed__help__derive,uuid)
-                cmd="1seed__help__derive__uuid"
+            1seed__subcmd__help__subcmd__derive,uuid)
+                cmd="1seed__subcmd__help__subcmd__derive__subcmd__uuid"
                 ;;
-            1seed__help__sign,data)
-                cmd="1seed__help__sign__data"
+            1seed__subcmd__help__subcmd__sign,data)
+                cmd="1seed__subcmd__help__subcmd__sign__subcmd__data"
                 ;;
-            1seed__help__sign,pub)
-                cmd="1seed__help__sign__pub"
+            1seed__subcmd__help__subcmd__sign,pub)
+                cmd="1seed__subcmd__help__subcmd__sign__subcmd__pub"
                 ;;
-            1seed__help__sign,verify)
-                cmd="1seed__help__sign__verify"
+            1seed__subcmd__help__subcmd__sign,verify)
+                cmd="1seed__subcmd__help__subcmd__sign__subcmd__verify"
                 ;;
-            1seed__help__ssh,add)
-                cmd="1seed__help__ssh__add"
+            1seed__subcmd__help__subcmd__ssh,add)
+                cmd="1seed__subcmd__help__subcmd__ssh__subcmd__add"
                 ;;
-            1seed__help__ssh,key)
-                cmd="1seed__help__ssh__key"
+            1seed__subcmd__help__subcmd__ssh,key)
+                cmd="1seed__subcmd__help__subcmd__ssh__subcmd__key"
                 ;;
-            1seed__help__ssh,pub)
-                cmd="1seed__help__ssh__pub"
+            1seed__subcmd__help__subcmd__ssh,pub)
+                cmd="1seed__subcmd__help__subcmd__ssh__subcmd__pub"
                 ;;
-            1seed__sign,data)
-                cmd="1seed__sign__data"
+            1seed__subcmd__sign,data)
+                cmd="1seed__subcmd__sign__subcmd__data"
                 ;;
-            1seed__sign,help)
-                cmd="1seed__sign__help"
+            1seed__subcmd__sign,help)
+                cmd="1seed__subcmd__sign__subcmd__help"
                 ;;
-            1seed__sign,pub)
-                cmd="1seed__sign__pub"
+            1seed__subcmd__sign,pub)
+                cmd="1seed__subcmd__sign__subcmd__pub"
                 ;;
-            1seed__sign,verify)
-                cmd="1seed__sign__verify"
+            1seed__subcmd__sign,verify)
+                cmd="1seed__subcmd__sign__subcmd__verify"
                 ;;
-            1seed__sign__help,data)
-                cmd="1seed__sign__help__data"
+            1seed__subcmd__sign__subcmd__help,data)
+                cmd="1seed__subcmd__sign__subcmd__help__subcmd__data"
                 ;;
-            1seed__sign__help,help)
-                cmd="1seed__sign__help__help"
+            1seed__subcmd__sign__subcmd__help,help)
+                cmd="1seed__subcmd__sign__subcmd__help__subcmd__help"
                 ;;
-            1seed__sign__help,pub)
-                cmd="1seed__sign__help__pub"
+            1seed__subcmd__sign__subcmd__help,pub)
+                cmd="1seed__subcmd__sign__subcmd__help__subcmd__pub"
                 ;;
-            1seed__sign__help,verify)
-                cmd="1seed__sign__help__verify"
+            1seed__subcmd__sign__subcmd__help,verify)
+                cmd="1seed__subcmd__sign__subcmd__help__subcmd__verify"
                 ;;
-            1seed__ssh,add)
-                cmd="1seed__ssh__add"
+            1seed__subcmd__ssh,add)
+                cmd="1seed__subcmd__ssh__subcmd__add"
                 ;;
-            1seed__ssh,help)
-                cmd="1seed__ssh__help"
+            1seed__subcmd__ssh,help)
+                cmd="1seed__subcmd__ssh__subcmd__help"
                 ;;
-            1seed__ssh,key)
-                cmd="1seed__ssh__key"
+            1seed__subcmd__ssh,key)
+                cmd="1seed__subcmd__ssh__subcmd__key"
                 ;;
-            1seed__ssh,pub)
-                cmd="1seed__ssh__pub"
+            1seed__subcmd__ssh,pub)
+                cmd="1seed__subcmd__ssh__subcmd__pub"
                 ;;
-            1seed__ssh__help,add)
-                cmd="1seed__ssh__help__add"
+            1seed__subcmd__ssh__subcmd__help,add)
+                cmd="1seed__subcmd__ssh__subcmd__help__subcmd__add"
                 ;;
-            1seed__ssh__help,help)
-                cmd="1seed__ssh__help__help"
+            1seed__subcmd__ssh__subcmd__help,help)
+                cmd="1seed__subcmd__ssh__subcmd__help__subcmd__help"
                 ;;
-            1seed__ssh__help,key)
-                cmd="1seed__ssh__help__key"
+            1seed__subcmd__ssh__subcmd__help,key)
+                cmd="1seed__subcmd__ssh__subcmd__help__subcmd__key"
                 ;;
-            1seed__ssh__help,pub)
-                cmd="1seed__ssh__help__pub"
+            1seed__subcmd__ssh__subcmd__help,pub)
+                cmd="1seed__subcmd__ssh__subcmd__help__subcmd__pub"
                 ;;
             *)
                 ;;
@@ -230,12 +230,16 @@ _1seed() {
 
     case "${cmd}" in
         1seed)
-            opts="-h -V --realm --help --version age ssh sign derive init forget status help"
+            opts="-h -V --seed-file --realm --help --version age ssh sign derive init forget status help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
             case "${prev}" in
+                --seed-file)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 --realm)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
@@ -247,7 +251,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__age)
+        1seed__subcmd__age)
             opts="-h --realm --help pub key encrypt decrypt help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -265,8 +269,8 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__age__decrypt)
-            opts="-k -p -o -h --key --passphrase --output --realm --help [FILE]"
+        1seed__subcmd__age__subcmd__decrypt)
+            opts="-k -p -o -h --key --passphrase --output --realm --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -299,8 +303,8 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__age__encrypt)
-            opts="-R -F -s -p -a -o -h --recipient --recipients-file --self --passphrase --armor --output --realm --help [FILE]"
+        1seed__subcmd__age__subcmd__encrypt)
+            opts="-R -F -s -p -a -o -h --recipient --recipients-file --self --passphrase --armor --output --realm --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -341,7 +345,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__age__help)
+        1seed__subcmd__age__subcmd__help)
             opts="pub key encrypt decrypt help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -355,7 +359,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__age__help__decrypt)
+        1seed__subcmd__age__subcmd__help__subcmd__decrypt)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -369,7 +373,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__age__help__encrypt)
+        1seed__subcmd__age__subcmd__help__subcmd__encrypt)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -383,7 +387,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__age__help__help)
+        1seed__subcmd__age__subcmd__help__subcmd__help)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -397,7 +401,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__age__help__key)
+        1seed__subcmd__age__subcmd__help__subcmd__key)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -411,7 +415,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__age__help__pub)
+        1seed__subcmd__age__subcmd__help__subcmd__pub)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -425,7 +429,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__age__key)
+        1seed__subcmd__age__subcmd__key)
             opts="-h --realm --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -443,7 +447,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__age__pub)
+        1seed__subcmd__age__subcmd__pub)
             opts="-h --realm --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -461,7 +465,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__derive)
+        1seed__subcmd__derive)
             opts="-h --realm --help password mnemonic int uuid raw help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -479,7 +483,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__derive__help)
+        1seed__subcmd__derive__subcmd__help)
             opts="password mnemonic int uuid raw help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -493,7 +497,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__derive__help__help)
+        1seed__subcmd__derive__subcmd__help__subcmd__help)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -507,7 +511,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__derive__help__int)
+        1seed__subcmd__derive__subcmd__help__subcmd__int)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -521,7 +525,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__derive__help__mnemonic)
+        1seed__subcmd__derive__subcmd__help__subcmd__mnemonic)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -535,7 +539,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__derive__help__password)
+        1seed__subcmd__derive__subcmd__help__subcmd__password)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -549,7 +553,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__derive__help__raw)
+        1seed__subcmd__derive__subcmd__help__subcmd__raw)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -563,7 +567,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__derive__help__uuid)
+        1seed__subcmd__derive__subcmd__help__subcmd__uuid)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -577,8 +581,8 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__derive__int)
-            opts="-h --min --max --realm --help <PATH>"
+        1seed__subcmd__derive__subcmd__int)
+            opts="-h --min --max --realm --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -603,7 +607,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__derive__mnemonic)
+        1seed__subcmd__derive__subcmd__mnemonic)
             opts="-w -h --words --realm --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -629,8 +633,8 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__derive__password)
-            opts="-l -n -h --length --no-symbols --symbols --counter --realm --help <SITE>"
+        1seed__subcmd__derive__subcmd__password)
+            opts="-l -n -h --length --no-symbols --symbols --counter --realm --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -667,8 +671,8 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__derive__raw)
-            opts="-l -h --length --hex --base64 --binary --realm --help <PATH>"
+        1seed__subcmd__derive__subcmd__raw)
+            opts="-l -h --length --hex --base64 --binary --realm --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -693,8 +697,8 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__derive__uuid)
-            opts="-h --realm --help <PATH>"
+        1seed__subcmd__derive__subcmd__uuid)
+            opts="-h --realm --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -711,7 +715,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__forget)
+        1seed__subcmd__forget)
             opts="-h --confirm --realm --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -729,7 +733,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__help)
+        1seed__subcmd__help)
             opts="age ssh sign derive init forget status help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -743,7 +747,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__help__age)
+        1seed__subcmd__help__subcmd__age)
             opts="pub key encrypt decrypt"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -757,7 +761,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__help__age__decrypt)
+        1seed__subcmd__help__subcmd__age__subcmd__decrypt)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -771,7 +775,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__help__age__encrypt)
+        1seed__subcmd__help__subcmd__age__subcmd__encrypt)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -785,7 +789,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__help__age__key)
+        1seed__subcmd__help__subcmd__age__subcmd__key)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -799,7 +803,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__help__age__pub)
+        1seed__subcmd__help__subcmd__age__subcmd__pub)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -813,7 +817,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__help__derive)
+        1seed__subcmd__help__subcmd__derive)
             opts="password mnemonic int uuid raw"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -827,7 +831,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__help__derive__int)
+        1seed__subcmd__help__subcmd__derive__subcmd__int)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -841,7 +845,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__help__derive__mnemonic)
+        1seed__subcmd__help__subcmd__derive__subcmd__mnemonic)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -855,7 +859,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__help__derive__password)
+        1seed__subcmd__help__subcmd__derive__subcmd__password)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -869,7 +873,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__help__derive__raw)
+        1seed__subcmd__help__subcmd__derive__subcmd__raw)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -883,7 +887,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__help__derive__uuid)
+        1seed__subcmd__help__subcmd__derive__subcmd__uuid)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -897,7 +901,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__help__forget)
+        1seed__subcmd__help__subcmd__forget)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -911,7 +915,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__help__help)
+        1seed__subcmd__help__subcmd__help)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -925,7 +929,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__help__init)
+        1seed__subcmd__help__subcmd__init)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -939,7 +943,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__help__sign)
+        1seed__subcmd__help__subcmd__sign)
             opts="pub data verify"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -953,7 +957,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__help__sign__data)
+        1seed__subcmd__help__subcmd__sign__subcmd__data)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -967,7 +971,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__help__sign__pub)
+        1seed__subcmd__help__subcmd__sign__subcmd__pub)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -981,7 +985,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__help__sign__verify)
+        1seed__subcmd__help__subcmd__sign__subcmd__verify)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -995,7 +999,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__help__ssh)
+        1seed__subcmd__help__subcmd__ssh)
             opts="pub key add"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -1009,7 +1013,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__help__ssh__add)
+        1seed__subcmd__help__subcmd__ssh__subcmd__add)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -1023,7 +1027,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__help__ssh__key)
+        1seed__subcmd__help__subcmd__ssh__subcmd__key)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -1037,7 +1041,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__help__ssh__pub)
+        1seed__subcmd__help__subcmd__ssh__subcmd__pub)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -1051,7 +1055,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__help__status)
+        1seed__subcmd__help__subcmd__status)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -1065,7 +1069,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__init)
+        1seed__subcmd__init)
             opts="-p -g -h --passphrase --generate --from-file --realm --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -1087,7 +1091,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__sign)
+        1seed__subcmd__sign)
             opts="-h --realm --help pub data verify help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -1105,8 +1109,8 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__sign__data)
-            opts="-o -h --output --binary --realm --help [FILE]"
+        1seed__subcmd__sign__subcmd__data)
+            opts="-o -h --output --binary --realm --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1131,7 +1135,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__sign__help)
+        1seed__subcmd__sign__subcmd__help)
             opts="pub data verify help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -1145,7 +1149,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__sign__help__data)
+        1seed__subcmd__sign__subcmd__help__subcmd__data)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -1159,7 +1163,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__sign__help__help)
+        1seed__subcmd__sign__subcmd__help__subcmd__help)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -1173,7 +1177,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__sign__help__pub)
+        1seed__subcmd__sign__subcmd__help__subcmd__pub)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -1187,7 +1191,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__sign__help__verify)
+        1seed__subcmd__sign__subcmd__help__subcmd__verify)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -1201,7 +1205,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__sign__pub)
+        1seed__subcmd__sign__subcmd__pub)
             opts="-h --realm --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -1219,8 +1223,8 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__sign__verify)
-            opts="-k -h --pubkey --realm --help <SIGNATURE> [FILE]"
+        1seed__subcmd__sign__subcmd__verify)
+            opts="-k -h --pubkey --realm --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1245,7 +1249,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__ssh)
+        1seed__subcmd__ssh)
             opts="-h --realm --help pub key add help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -1263,7 +1267,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__ssh__add)
+        1seed__subcmd__ssh__subcmd__add)
             opts="-l -c -h --lifetime --confirm --realm --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -1289,7 +1293,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__ssh__help)
+        1seed__subcmd__ssh__subcmd__help)
             opts="pub key add help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -1303,7 +1307,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__ssh__help__add)
+        1seed__subcmd__ssh__subcmd__help__subcmd__add)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -1317,7 +1321,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__ssh__help__help)
+        1seed__subcmd__ssh__subcmd__help__subcmd__help)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -1331,7 +1335,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__ssh__help__key)
+        1seed__subcmd__ssh__subcmd__help__subcmd__key)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -1345,7 +1349,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__ssh__help__pub)
+        1seed__subcmd__ssh__subcmd__help__subcmd__pub)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -1359,7 +1363,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__ssh__key)
+        1seed__subcmd__ssh__subcmd__key)
             opts="-h --realm --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -1377,7 +1381,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__ssh__pub)
+        1seed__subcmd__ssh__subcmd__pub)
             opts="-h --realm --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -1395,7 +1399,7 @@ _1seed() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        1seed__status)
+        1seed__subcmd__status)
             opts="-h --realm --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )

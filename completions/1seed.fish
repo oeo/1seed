@@ -1,29 +1,30 @@
 # Print an optspec for argparse to handle cmd's options that are independent of any subcommand.
 function __fish_1seed_global_optspecs
-	string join \n realm= h/help V/version
+    string join \n seed-file= realm= h/help V/version
 end
 
 function __fish_1seed_needs_command
-	# Figure out if the current invocation already has a command.
-	set -l cmd (commandline -opc)
-	set -e cmd[1]
-	argparse -s (__fish_1seed_global_optspecs) -- $cmd 2>/dev/null
-	or return
-	if set -q argv[1]
-		# Also print the command, so this can be used to figure out what it is.
-		echo $argv[1]
-		return 1
-	end
-	return 0
+    # Figure out if the current invocation already has a command.
+    set -l cmd (commandline -opc)
+    set -e cmd[1]
+    argparse -s (__fish_1seed_global_optspecs) -- $cmd 2>/dev/null
+    or return
+    if set -q argv[1]
+        # Also print the command, so this can be used to figure out what it is.
+        echo $argv[1]
+        return 1
+    end
+    return 0
 end
 
 function __fish_1seed_using_subcommand
-	set -l cmd (__fish_1seed_needs_command)
-	test -z "$cmd"
-	and return 1
-	contains -- $cmd[1] $argv
+    set -l cmd (__fish_1seed_needs_command)
+    test -z "$cmd"
+    and return 1
+    contains -- $cmd[1] $argv
 end
 
+complete -c 1seed -n "__fish_1seed_needs_command" -l seed-file -r -F
 complete -c 1seed -n "__fish_1seed_needs_command" -l realm -r
 complete -c 1seed -n "__fish_1seed_needs_command" -s h -l help -d 'Print help'
 complete -c 1seed -n "__fish_1seed_needs_command" -s V -l version -d 'Print version'
@@ -31,8 +32,8 @@ complete -c 1seed -n "__fish_1seed_needs_command" -f -a "age" -d 'Age encryption
 complete -c 1seed -n "__fish_1seed_needs_command" -f -a "ssh" -d 'SSH keys and operations'
 complete -c 1seed -n "__fish_1seed_needs_command" -f -a "sign" -d 'Ed25519 signing keys and operations'
 complete -c 1seed -n "__fish_1seed_needs_command" -f -a "derive" -d 'Derive passwords, mnemonics, and raw bytes'
-complete -c 1seed -n "__fish_1seed_needs_command" -f -a "init" -d 'Initialize: store seed in OS keychain'
-complete -c 1seed -n "__fish_1seed_needs_command" -f -a "forget" -d 'Remove seed from OS keychain'
+complete -c 1seed -n "__fish_1seed_needs_command" -f -a "init" -d 'Initialize: store seed in OS keychain (~/.1seed on Linux)'
+complete -c 1seed -n "__fish_1seed_needs_command" -f -a "forget" -d 'Remove seed from OS keychain and ~/.1seed'
 complete -c 1seed -n "__fish_1seed_needs_command" -f -a "status" -d 'Show status and derived keys'
 complete -c 1seed -n "__fish_1seed_needs_command" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
 complete -c 1seed -n "__fish_1seed_using_subcommand age; and not __fish_seen_subcommand_from pub key encrypt decrypt help" -l realm -r
@@ -150,8 +151,8 @@ complete -c 1seed -n "__fish_1seed_using_subcommand help; and not __fish_seen_su
 complete -c 1seed -n "__fish_1seed_using_subcommand help; and not __fish_seen_subcommand_from age ssh sign derive init forget status help" -f -a "ssh" -d 'SSH keys and operations'
 complete -c 1seed -n "__fish_1seed_using_subcommand help; and not __fish_seen_subcommand_from age ssh sign derive init forget status help" -f -a "sign" -d 'Ed25519 signing keys and operations'
 complete -c 1seed -n "__fish_1seed_using_subcommand help; and not __fish_seen_subcommand_from age ssh sign derive init forget status help" -f -a "derive" -d 'Derive passwords, mnemonics, and raw bytes'
-complete -c 1seed -n "__fish_1seed_using_subcommand help; and not __fish_seen_subcommand_from age ssh sign derive init forget status help" -f -a "init" -d 'Initialize: store seed in OS keychain'
-complete -c 1seed -n "__fish_1seed_using_subcommand help; and not __fish_seen_subcommand_from age ssh sign derive init forget status help" -f -a "forget" -d 'Remove seed from OS keychain'
+complete -c 1seed -n "__fish_1seed_using_subcommand help; and not __fish_seen_subcommand_from age ssh sign derive init forget status help" -f -a "init" -d 'Initialize: store seed in OS keychain (~/.1seed on Linux)'
+complete -c 1seed -n "__fish_1seed_using_subcommand help; and not __fish_seen_subcommand_from age ssh sign derive init forget status help" -f -a "forget" -d 'Remove seed from OS keychain and ~/.1seed'
 complete -c 1seed -n "__fish_1seed_using_subcommand help; and not __fish_seen_subcommand_from age ssh sign derive init forget status help" -f -a "status" -d 'Show status and derived keys'
 complete -c 1seed -n "__fish_1seed_using_subcommand help; and not __fish_seen_subcommand_from age ssh sign derive init forget status help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
 complete -c 1seed -n "__fish_1seed_using_subcommand help; and __fish_seen_subcommand_from age" -f -a "pub" -d 'Show age public key'
