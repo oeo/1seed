@@ -106,7 +106,8 @@ export SEED_REALM=personal
 
 ## Version History
 
-- **v0.8.0**: Added `--seed-file`, upgraded age to 0.12, refreshed audited dependencies
+- **v0.8.1**: Seed file written atomically; keyring failures are reported and no longer treated as a missing seed
+- **v0.8.0**: Added `--seed-file`, upgraded age to 0.12, refreshed audited dependencies; Linux stores the seed in `~/.1seed`; malformed seeds are rejected
 - **v0.7.0**: Upgraded age crate to 0.11, expanded age encryption test coverage
 - **v0.6.0**: Removed self-update, added man page and fuzz targets
 - **v0.5.2**: Code formatting fixes
