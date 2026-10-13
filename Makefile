@@ -72,8 +72,10 @@ bump:
 release:
 	@if [ -z "$(VERSION)" ]; then echo "Usage: make release VERSION=0.2.0"; exit 1; fi
 	@echo "Releasing version $(VERSION)..."
+	cargo fmt -- --check
 	sed -i.bak 's/^version = ".*"/version = "$(VERSION)"/' Cargo.toml && rm Cargo.toml.bak
-	git add Cargo.toml
+	$(MAKE) lint test
+	git add Cargo.toml Cargo.lock
 	git commit -m "Bump version to v$(VERSION)"
 	git tag -a v$(VERSION) -m "Release v$(VERSION)"
 	git push origin master

@@ -49,13 +49,13 @@ jobs:
         run: cargo fmt -- --check
 
       - name: Clippy
-        run: cargo clippy -- -D warnings
+        run: cargo clippy --locked -- -D warnings
 
       - name: Build
-        run: cargo build --release
+        run: cargo build --release --locked
 
       - name: Test
-        run: cargo test
+        run: cargo test --locked
 
   audit:
     runs-on: ubuntu-latest
@@ -78,7 +78,7 @@ jobs:
         run: cargo audit
 
   release:
-    needs: test
+    needs: [test, audit]
     if: startsWith(github.ref, 'refs/tags/')
     permissions:
       contents: write
@@ -115,6 +115,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check tag matches Cargo version
+        shell: bash
+        run: grep -q "^version = \"${GITHUB_REF_NAME#v}\"" Cargo.toml
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -125,7 +129,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
 
       - name: Build
-        run: cargo build --release --target ${{ matrix.target }}
+        run: cargo build --release --locked --target ${{ matrix.target }}
         env:
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
 
@@ -135,14 +139,19 @@ jobs:
           cp target/${{ matrix.target }}/release/1seed${{ matrix.extension }} ${{ matrix.asset }}${{ matrix.extension }}
           chmod +x ${{ matrix.asset }}${{ matrix.extension }}
           tar czf ${{ matrix.asset }}.tar.gz ${{ matrix.asset }}${{ matrix.extension }}
+          shasum -a 256 ${{ matrix.asset }}.tar.gz > ${{ matrix.asset }}.tar.gz.sha256
 
       - name: Package (Windows)
         if: matrix.archive == 'zip'
         run: |
           Copy-Item target/${{ matrix.target }}/release/1seed${{ matrix.extension }} ${{ matrix.asset }}${{ matrix.extension }}
           Compress-Archive -Path ${{ matrix.asset }}${{ matrix.extension }} -DestinationPath ${{ matrix.asset }}.zip
+          "$((Get-FileHash ${{ matrix.asset }}.zip -Algorithm SHA256).Hash.ToLower())  ${{ matrix.asset }}.zip`n" | Out-File -Encoding ascii -NoNewline ${{ matrix.asset }}.zip.sha256
 
       - name: Upload
-        uses: softprops/action-gh-release@26994186c0ac3ef5cae75ac16aa32e8153525f77
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
-          files: ${{ matrix.asset }}.${{ matrix.archive }}
+          fail_on_unmatched_files: true
+          files: |
+            ${{ matrix.asset }}.${{ matrix.archive }}
+            ${{ matrix.asset }}.${{ matrix.archive }}.sha256
