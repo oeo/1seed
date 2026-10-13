@@ -59,3 +59,11 @@ tempfile = "3.10"
 [profile.release]
 lto = true
 strip = true
+
+# Passphrase tests run scrypt at its production cost, which takes about a
+# minute per derivation when these crates are unoptimized.
+[profile.dev.package.scrypt]
+opt-level = 3
+
+[profile.dev.package.salsa20]
+opt-level = 3

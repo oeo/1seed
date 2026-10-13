@@ -15,6 +15,7 @@ _1seed() {
 
     local context curcontext="$curcontext" state line
     _arguments "${_arguments_options[@]}" : \
+'--seed-file=[]:SEED_FILE:_files' \
 '--realm=[]:REALM:_default' \
 '-h[Print help]' \
 '--help[Print help]' \
@@ -34,7 +35,7 @@ _arguments "${_arguments_options[@]}" : \
 '--realm=[]:REALM:_default' \
 '-h[Print help]' \
 '--help[Print help]' \
-":: :_1seed__age_commands" \
+":: :_1seed__subcmd__age_commands" \
 "*::: :->age" \
 && ret=0
 
@@ -94,7 +95,7 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (help)
 _arguments "${_arguments_options[@]}" : \
-":: :_1seed__age__help_commands" \
+":: :_1seed__subcmd__age__subcmd__help_commands" \
 "*::: :->help" \
 && ret=0
 
@@ -137,7 +138,7 @@ _arguments "${_arguments_options[@]}" : \
 '--realm=[]:REALM:_default' \
 '-h[Print help]' \
 '--help[Print help]' \
-":: :_1seed__ssh_commands" \
+":: :_1seed__subcmd__ssh_commands" \
 "*::: :->ssh" \
 && ret=0
 
@@ -174,7 +175,7 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (help)
 _arguments "${_arguments_options[@]}" : \
-":: :_1seed__ssh__help_commands" \
+":: :_1seed__subcmd__ssh__subcmd__help_commands" \
 "*::: :->help" \
 && ret=0
 
@@ -213,7 +214,7 @@ _arguments "${_arguments_options[@]}" : \
 '--realm=[]:REALM:_default' \
 '-h[Print help]' \
 '--help[Print help]' \
-":: :_1seed__sign_commands" \
+":: :_1seed__subcmd__sign_commands" \
 "*::: :->sign" \
 && ret=0
 
@@ -254,7 +255,7 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (help)
 _arguments "${_arguments_options[@]}" : \
-":: :_1seed__sign__help_commands" \
+":: :_1seed__subcmd__sign__subcmd__help_commands" \
 "*::: :->help" \
 && ret=0
 
@@ -293,7 +294,7 @@ _arguments "${_arguments_options[@]}" : \
 '--realm=[]:REALM:_default' \
 '-h[Print help]' \
 '--help[Print help]' \
-":: :_1seed__derive_commands" \
+":: :_1seed__subcmd__derive_commands" \
 "*::: :->derive" \
 && ret=0
 
@@ -359,7 +360,7 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (help)
 _arguments "${_arguments_options[@]}" : \
-":: :_1seed__derive__help_commands" \
+":: :_1seed__subcmd__derive__subcmd__help_commands" \
 "*::: :->help" \
 && ret=0
 
@@ -430,7 +431,7 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (help)
 _arguments "${_arguments_options[@]}" : \
-":: :_1seed__help_commands" \
+":: :_1seed__subcmd__help_commands" \
 "*::: :->help" \
 && ret=0
 
@@ -442,7 +443,7 @@ _arguments "${_arguments_options[@]}" : \
         case $line[1] in
             (age)
 _arguments "${_arguments_options[@]}" : \
-":: :_1seed__help__age_commands" \
+":: :_1seed__subcmd__help__subcmd__age_commands" \
 "*::: :->age" \
 && ret=0
 
@@ -474,7 +475,7 @@ esac
 ;;
 (ssh)
 _arguments "${_arguments_options[@]}" : \
-":: :_1seed__help__ssh_commands" \
+":: :_1seed__subcmd__help__subcmd__ssh_commands" \
 "*::: :->ssh" \
 && ret=0
 
@@ -502,7 +503,7 @@ esac
 ;;
 (sign)
 _arguments "${_arguments_options[@]}" : \
-":: :_1seed__help__sign_commands" \
+":: :_1seed__subcmd__help__subcmd__sign_commands" \
 "*::: :->sign" \
 && ret=0
 
@@ -530,7 +531,7 @@ esac
 ;;
 (derive)
 _arguments "${_arguments_options[@]}" : \
-":: :_1seed__help__derive_commands" \
+":: :_1seed__subcmd__help__subcmd__derive_commands" \
 "*::: :->derive" \
 && ret=0
 
@@ -596,15 +597,15 @@ _1seed_commands() {
 'ssh:SSH keys and operations' \
 'sign:Ed25519 signing keys and operations' \
 'derive:Derive passwords, mnemonics, and raw bytes' \
-'init:Initialize\: store seed in OS keychain' \
-'forget:Remove seed from OS keychain' \
+'init:Initialize\: store seed in OS keychain (~/.1seed on Linux)' \
+'forget:Remove seed from OS keychain and ~/.1seed' \
 'status:Show status and derived keys' \
 'help:Print this message or the help of the given subcommand(s)' \
     )
     _describe -t commands '1seed commands' commands "$@"
 }
-(( $+functions[_1seed__age_commands] )) ||
-_1seed__age_commands() {
+(( $+functions[_1seed__subcmd__age_commands] )) ||
+_1seed__subcmd__age_commands() {
     local commands; commands=(
 'pub:Show age public key' \
 'key:Show age private key' \
@@ -614,18 +615,18 @@ _1seed__age_commands() {
     )
     _describe -t commands '1seed age commands' commands "$@"
 }
-(( $+functions[_1seed__age__decrypt_commands] )) ||
-_1seed__age__decrypt_commands() {
+(( $+functions[_1seed__subcmd__age__subcmd__decrypt_commands] )) ||
+_1seed__subcmd__age__subcmd__decrypt_commands() {
     local commands; commands=()
     _describe -t commands '1seed age decrypt commands' commands "$@"
 }
-(( $+functions[_1seed__age__encrypt_commands] )) ||
-_1seed__age__encrypt_commands() {
+(( $+functions[_1seed__subcmd__age__subcmd__encrypt_commands] )) ||
+_1seed__subcmd__age__subcmd__encrypt_commands() {
     local commands; commands=()
     _describe -t commands '1seed age encrypt commands' commands "$@"
 }
-(( $+functions[_1seed__age__help_commands] )) ||
-_1seed__age__help_commands() {
+(( $+functions[_1seed__subcmd__age__subcmd__help_commands] )) ||
+_1seed__subcmd__age__subcmd__help_commands() {
     local commands; commands=(
 'pub:Show age public key' \
 'key:Show age private key' \
@@ -635,43 +636,43 @@ _1seed__age__help_commands() {
     )
     _describe -t commands '1seed age help commands' commands "$@"
 }
-(( $+functions[_1seed__age__help__decrypt_commands] )) ||
-_1seed__age__help__decrypt_commands() {
+(( $+functions[_1seed__subcmd__age__subcmd__help__subcmd__decrypt_commands] )) ||
+_1seed__subcmd__age__subcmd__help__subcmd__decrypt_commands() {
     local commands; commands=()
     _describe -t commands '1seed age help decrypt commands' commands "$@"
 }
-(( $+functions[_1seed__age__help__encrypt_commands] )) ||
-_1seed__age__help__encrypt_commands() {
+(( $+functions[_1seed__subcmd__age__subcmd__help__subcmd__encrypt_commands] )) ||
+_1seed__subcmd__age__subcmd__help__subcmd__encrypt_commands() {
     local commands; commands=()
     _describe -t commands '1seed age help encrypt commands' commands "$@"
 }
-(( $+functions[_1seed__age__help__help_commands] )) ||
-_1seed__age__help__help_commands() {
+(( $+functions[_1seed__subcmd__age__subcmd__help__subcmd__help_commands] )) ||
+_1seed__subcmd__age__subcmd__help__subcmd__help_commands() {
     local commands; commands=()
     _describe -t commands '1seed age help help commands' commands "$@"
 }
-(( $+functions[_1seed__age__help__key_commands] )) ||
-_1seed__age__help__key_commands() {
+(( $+functions[_1seed__subcmd__age__subcmd__help__subcmd__key_commands] )) ||
+_1seed__subcmd__age__subcmd__help__subcmd__key_commands() {
     local commands; commands=()
     _describe -t commands '1seed age help key commands' commands "$@"
 }
-(( $+functions[_1seed__age__help__pub_commands] )) ||
-_1seed__age__help__pub_commands() {
+(( $+functions[_1seed__subcmd__age__subcmd__help__subcmd__pub_commands] )) ||
+_1seed__subcmd__age__subcmd__help__subcmd__pub_commands() {
     local commands; commands=()
     _describe -t commands '1seed age help pub commands' commands "$@"
 }
-(( $+functions[_1seed__age__key_commands] )) ||
-_1seed__age__key_commands() {
+(( $+functions[_1seed__subcmd__age__subcmd__key_commands] )) ||
+_1seed__subcmd__age__subcmd__key_commands() {
     local commands; commands=()
     _describe -t commands '1seed age key commands' commands "$@"
 }
-(( $+functions[_1seed__age__pub_commands] )) ||
-_1seed__age__pub_commands() {
+(( $+functions[_1seed__subcmd__age__subcmd__pub_commands] )) ||
+_1seed__subcmd__age__subcmd__pub_commands() {
     local commands; commands=()
     _describe -t commands '1seed age pub commands' commands "$@"
 }
-(( $+functions[_1seed__derive_commands] )) ||
-_1seed__derive_commands() {
+(( $+functions[_1seed__subcmd__derive_commands] )) ||
+_1seed__subcmd__derive_commands() {
     local commands; commands=(
 'password:Derive password for site' \
 'mnemonic:Derive BIP39 mnemonic' \
@@ -682,8 +683,8 @@ _1seed__derive_commands() {
     )
     _describe -t commands '1seed derive commands' commands "$@"
 }
-(( $+functions[_1seed__derive__help_commands] )) ||
-_1seed__derive__help_commands() {
+(( $+functions[_1seed__subcmd__derive__subcmd__help_commands] )) ||
+_1seed__subcmd__derive__subcmd__help_commands() {
     local commands; commands=(
 'password:Derive password for site' \
 'mnemonic:Derive BIP39 mnemonic' \
@@ -694,82 +695,82 @@ _1seed__derive__help_commands() {
     )
     _describe -t commands '1seed derive help commands' commands "$@"
 }
-(( $+functions[_1seed__derive__help__help_commands] )) ||
-_1seed__derive__help__help_commands() {
+(( $+functions[_1seed__subcmd__derive__subcmd__help__subcmd__help_commands] )) ||
+_1seed__subcmd__derive__subcmd__help__subcmd__help_commands() {
     local commands; commands=()
     _describe -t commands '1seed derive help help commands' commands "$@"
 }
-(( $+functions[_1seed__derive__help__int_commands] )) ||
-_1seed__derive__help__int_commands() {
+(( $+functions[_1seed__subcmd__derive__subcmd__help__subcmd__int_commands] )) ||
+_1seed__subcmd__derive__subcmd__help__subcmd__int_commands() {
     local commands; commands=()
     _describe -t commands '1seed derive help int commands' commands "$@"
 }
-(( $+functions[_1seed__derive__help__mnemonic_commands] )) ||
-_1seed__derive__help__mnemonic_commands() {
+(( $+functions[_1seed__subcmd__derive__subcmd__help__subcmd__mnemonic_commands] )) ||
+_1seed__subcmd__derive__subcmd__help__subcmd__mnemonic_commands() {
     local commands; commands=()
     _describe -t commands '1seed derive help mnemonic commands' commands "$@"
 }
-(( $+functions[_1seed__derive__help__password_commands] )) ||
-_1seed__derive__help__password_commands() {
+(( $+functions[_1seed__subcmd__derive__subcmd__help__subcmd__password_commands] )) ||
+_1seed__subcmd__derive__subcmd__help__subcmd__password_commands() {
     local commands; commands=()
     _describe -t commands '1seed derive help password commands' commands "$@"
 }
-(( $+functions[_1seed__derive__help__raw_commands] )) ||
-_1seed__derive__help__raw_commands() {
+(( $+functions[_1seed__subcmd__derive__subcmd__help__subcmd__raw_commands] )) ||
+_1seed__subcmd__derive__subcmd__help__subcmd__raw_commands() {
     local commands; commands=()
     _describe -t commands '1seed derive help raw commands' commands "$@"
 }
-(( $+functions[_1seed__derive__help__uuid_commands] )) ||
-_1seed__derive__help__uuid_commands() {
+(( $+functions[_1seed__subcmd__derive__subcmd__help__subcmd__uuid_commands] )) ||
+_1seed__subcmd__derive__subcmd__help__subcmd__uuid_commands() {
     local commands; commands=()
     _describe -t commands '1seed derive help uuid commands' commands "$@"
 }
-(( $+functions[_1seed__derive__int_commands] )) ||
-_1seed__derive__int_commands() {
+(( $+functions[_1seed__subcmd__derive__subcmd__int_commands] )) ||
+_1seed__subcmd__derive__subcmd__int_commands() {
     local commands; commands=()
     _describe -t commands '1seed derive int commands' commands "$@"
 }
-(( $+functions[_1seed__derive__mnemonic_commands] )) ||
-_1seed__derive__mnemonic_commands() {
+(( $+functions[_1seed__subcmd__derive__subcmd__mnemonic_commands] )) ||
+_1seed__subcmd__derive__subcmd__mnemonic_commands() {
     local commands; commands=()
     _describe -t commands '1seed derive mnemonic commands' commands "$@"
 }
-(( $+functions[_1seed__derive__password_commands] )) ||
-_1seed__derive__password_commands() {
+(( $+functions[_1seed__subcmd__derive__subcmd__password_commands] )) ||
+_1seed__subcmd__derive__subcmd__password_commands() {
     local commands; commands=()
     _describe -t commands '1seed derive password commands' commands "$@"
 }
-(( $+functions[_1seed__derive__raw_commands] )) ||
-_1seed__derive__raw_commands() {
+(( $+functions[_1seed__subcmd__derive__subcmd__raw_commands] )) ||
+_1seed__subcmd__derive__subcmd__raw_commands() {
     local commands; commands=()
     _describe -t commands '1seed derive raw commands' commands "$@"
 }
-(( $+functions[_1seed__derive__uuid_commands] )) ||
-_1seed__derive__uuid_commands() {
+(( $+functions[_1seed__subcmd__derive__subcmd__uuid_commands] )) ||
+_1seed__subcmd__derive__subcmd__uuid_commands() {
     local commands; commands=()
     _describe -t commands '1seed derive uuid commands' commands "$@"
 }
-(( $+functions[_1seed__forget_commands] )) ||
-_1seed__forget_commands() {
+(( $+functions[_1seed__subcmd__forget_commands] )) ||
+_1seed__subcmd__forget_commands() {
     local commands; commands=()
     _describe -t commands '1seed forget commands' commands "$@"
 }
-(( $+functions[_1seed__help_commands] )) ||
-_1seed__help_commands() {
+(( $+functions[_1seed__subcmd__help_commands] )) ||
+_1seed__subcmd__help_commands() {
     local commands; commands=(
 'age:Age encryption keys and operations' \
 'ssh:SSH keys and operations' \
 'sign:Ed25519 signing keys and operations' \
 'derive:Derive passwords, mnemonics, and raw bytes' \
-'init:Initialize\: store seed in OS keychain' \
-'forget:Remove seed from OS keychain' \
+'init:Initialize\: store seed in OS keychain (~/.1seed on Linux)' \
+'forget:Remove seed from OS keychain and ~/.1seed' \
 'status:Show status and derived keys' \
 'help:Print this message or the help of the given subcommand(s)' \
     )
     _describe -t commands '1seed help commands' commands "$@"
 }
-(( $+functions[_1seed__help__age_commands] )) ||
-_1seed__help__age_commands() {
+(( $+functions[_1seed__subcmd__help__subcmd__age_commands] )) ||
+_1seed__subcmd__help__subcmd__age_commands() {
     local commands; commands=(
 'pub:Show age public key' \
 'key:Show age private key' \
@@ -778,28 +779,28 @@ _1seed__help__age_commands() {
     )
     _describe -t commands '1seed help age commands' commands "$@"
 }
-(( $+functions[_1seed__help__age__decrypt_commands] )) ||
-_1seed__help__age__decrypt_commands() {
+(( $+functions[_1seed__subcmd__help__subcmd__age__subcmd__decrypt_commands] )) ||
+_1seed__subcmd__help__subcmd__age__subcmd__decrypt_commands() {
     local commands; commands=()
     _describe -t commands '1seed help age decrypt commands' commands "$@"
 }
-(( $+functions[_1seed__help__age__encrypt_commands] )) ||
-_1seed__help__age__encrypt_commands() {
+(( $+functions[_1seed__subcmd__help__subcmd__age__subcmd__encrypt_commands] )) ||
+_1seed__subcmd__help__subcmd__age__subcmd__encrypt_commands() {
     local commands; commands=()
     _describe -t commands '1seed help age encrypt commands' commands "$@"
 }
-(( $+functions[_1seed__help__age__key_commands] )) ||
-_1seed__help__age__key_commands() {
+(( $+functions[_1seed__subcmd__help__subcmd__age__subcmd__key_commands] )) ||
+_1seed__subcmd__help__subcmd__age__subcmd__key_commands() {
     local commands; commands=()
     _describe -t commands '1seed help age key commands' commands "$@"
 }
-(( $+functions[_1seed__help__age__pub_commands] )) ||
-_1seed__help__age__pub_commands() {
+(( $+functions[_1seed__subcmd__help__subcmd__age__subcmd__pub_commands] )) ||
+_1seed__subcmd__help__subcmd__age__subcmd__pub_commands() {
     local commands; commands=()
     _describe -t commands '1seed help age pub commands' commands "$@"
 }
-(( $+functions[_1seed__help__derive_commands] )) ||
-_1seed__help__derive_commands() {
+(( $+functions[_1seed__subcmd__help__subcmd__derive_commands] )) ||
+_1seed__subcmd__help__subcmd__derive_commands() {
     local commands; commands=(
 'password:Derive password for site' \
 'mnemonic:Derive BIP39 mnemonic' \
@@ -809,48 +810,48 @@ _1seed__help__derive_commands() {
     )
     _describe -t commands '1seed help derive commands' commands "$@"
 }
-(( $+functions[_1seed__help__derive__int_commands] )) ||
-_1seed__help__derive__int_commands() {
+(( $+functions[_1seed__subcmd__help__subcmd__derive__subcmd__int_commands] )) ||
+_1seed__subcmd__help__subcmd__derive__subcmd__int_commands() {
     local commands; commands=()
     _describe -t commands '1seed help derive int commands' commands "$@"
 }
-(( $+functions[_1seed__help__derive__mnemonic_commands] )) ||
-_1seed__help__derive__mnemonic_commands() {
+(( $+functions[_1seed__subcmd__help__subcmd__derive__subcmd__mnemonic_commands] )) ||
+_1seed__subcmd__help__subcmd__derive__subcmd__mnemonic_commands() {
     local commands; commands=()
     _describe -t commands '1seed help derive mnemonic commands' commands "$@"
 }
-(( $+functions[_1seed__help__derive__password_commands] )) ||
-_1seed__help__derive__password_commands() {
+(( $+functions[_1seed__subcmd__help__subcmd__derive__subcmd__password_commands] )) ||
+_1seed__subcmd__help__subcmd__derive__subcmd__password_commands() {
     local commands; commands=()
     _describe -t commands '1seed help derive password commands' commands "$@"
 }
-(( $+functions[_1seed__help__derive__raw_commands] )) ||
-_1seed__help__derive__raw_commands() {
+(( $+functions[_1seed__subcmd__help__subcmd__derive__subcmd__raw_commands] )) ||
+_1seed__subcmd__help__subcmd__derive__subcmd__raw_commands() {
     local commands; commands=()
     _describe -t commands '1seed help derive raw commands' commands "$@"
 }
-(( $+functions[_1seed__help__derive__uuid_commands] )) ||
-_1seed__help__derive__uuid_commands() {
+(( $+functions[_1seed__subcmd__help__subcmd__derive__subcmd__uuid_commands] )) ||
+_1seed__subcmd__help__subcmd__derive__subcmd__uuid_commands() {
     local commands; commands=()
     _describe -t commands '1seed help derive uuid commands' commands "$@"
 }
-(( $+functions[_1seed__help__forget_commands] )) ||
-_1seed__help__forget_commands() {
+(( $+functions[_1seed__subcmd__help__subcmd__forget_commands] )) ||
+_1seed__subcmd__help__subcmd__forget_commands() {
     local commands; commands=()
     _describe -t commands '1seed help forget commands' commands "$@"
 }
-(( $+functions[_1seed__help__help_commands] )) ||
-_1seed__help__help_commands() {
+(( $+functions[_1seed__subcmd__help__subcmd__help_commands] )) ||
+_1seed__subcmd__help__subcmd__help_commands() {
     local commands; commands=()
     _describe -t commands '1seed help help commands' commands "$@"
 }
-(( $+functions[_1seed__help__init_commands] )) ||
-_1seed__help__init_commands() {
+(( $+functions[_1seed__subcmd__help__subcmd__init_commands] )) ||
+_1seed__subcmd__help__subcmd__init_commands() {
     local commands; commands=()
     _describe -t commands '1seed help init commands' commands "$@"
 }
-(( $+functions[_1seed__help__sign_commands] )) ||
-_1seed__help__sign_commands() {
+(( $+functions[_1seed__subcmd__help__subcmd__sign_commands] )) ||
+_1seed__subcmd__help__subcmd__sign_commands() {
     local commands; commands=(
 'pub:Show signing public key' \
 'data:Sign data' \
@@ -858,23 +859,23 @@ _1seed__help__sign_commands() {
     )
     _describe -t commands '1seed help sign commands' commands "$@"
 }
-(( $+functions[_1seed__help__sign__data_commands] )) ||
-_1seed__help__sign__data_commands() {
+(( $+functions[_1seed__subcmd__help__subcmd__sign__subcmd__data_commands] )) ||
+_1seed__subcmd__help__subcmd__sign__subcmd__data_commands() {
     local commands; commands=()
     _describe -t commands '1seed help sign data commands' commands "$@"
 }
-(( $+functions[_1seed__help__sign__pub_commands] )) ||
-_1seed__help__sign__pub_commands() {
+(( $+functions[_1seed__subcmd__help__subcmd__sign__subcmd__pub_commands] )) ||
+_1seed__subcmd__help__subcmd__sign__subcmd__pub_commands() {
     local commands; commands=()
     _describe -t commands '1seed help sign pub commands' commands "$@"
 }
-(( $+functions[_1seed__help__sign__verify_commands] )) ||
-_1seed__help__sign__verify_commands() {
+(( $+functions[_1seed__subcmd__help__subcmd__sign__subcmd__verify_commands] )) ||
+_1seed__subcmd__help__subcmd__sign__subcmd__verify_commands() {
     local commands; commands=()
     _describe -t commands '1seed help sign verify commands' commands "$@"
 }
-(( $+functions[_1seed__help__ssh_commands] )) ||
-_1seed__help__ssh_commands() {
+(( $+functions[_1seed__subcmd__help__subcmd__ssh_commands] )) ||
+_1seed__subcmd__help__subcmd__ssh_commands() {
     local commands; commands=(
 'pub:Show SSH public key' \
 'key:Show SSH private key' \
@@ -882,33 +883,33 @@ _1seed__help__ssh_commands() {
     )
     _describe -t commands '1seed help ssh commands' commands "$@"
 }
-(( $+functions[_1seed__help__ssh__add_commands] )) ||
-_1seed__help__ssh__add_commands() {
+(( $+functions[_1seed__subcmd__help__subcmd__ssh__subcmd__add_commands] )) ||
+_1seed__subcmd__help__subcmd__ssh__subcmd__add_commands() {
     local commands; commands=()
     _describe -t commands '1seed help ssh add commands' commands "$@"
 }
-(( $+functions[_1seed__help__ssh__key_commands] )) ||
-_1seed__help__ssh__key_commands() {
+(( $+functions[_1seed__subcmd__help__subcmd__ssh__subcmd__key_commands] )) ||
+_1seed__subcmd__help__subcmd__ssh__subcmd__key_commands() {
     local commands; commands=()
     _describe -t commands '1seed help ssh key commands' commands "$@"
 }
-(( $+functions[_1seed__help__ssh__pub_commands] )) ||
-_1seed__help__ssh__pub_commands() {
+(( $+functions[_1seed__subcmd__help__subcmd__ssh__subcmd__pub_commands] )) ||
+_1seed__subcmd__help__subcmd__ssh__subcmd__pub_commands() {
     local commands; commands=()
     _describe -t commands '1seed help ssh pub commands' commands "$@"
 }
-(( $+functions[_1seed__help__status_commands] )) ||
-_1seed__help__status_commands() {
+(( $+functions[_1seed__subcmd__help__subcmd__status_commands] )) ||
+_1seed__subcmd__help__subcmd__status_commands() {
     local commands; commands=()
     _describe -t commands '1seed help status commands' commands "$@"
 }
-(( $+functions[_1seed__init_commands] )) ||
-_1seed__init_commands() {
+(( $+functions[_1seed__subcmd__init_commands] )) ||
+_1seed__subcmd__init_commands() {
     local commands; commands=()
     _describe -t commands '1seed init commands' commands "$@"
 }
-(( $+functions[_1seed__sign_commands] )) ||
-_1seed__sign_commands() {
+(( $+functions[_1seed__subcmd__sign_commands] )) ||
+_1seed__subcmd__sign_commands() {
     local commands; commands=(
 'pub:Show signing public key' \
 'data:Sign data' \
@@ -917,13 +918,13 @@ _1seed__sign_commands() {
     )
     _describe -t commands '1seed sign commands' commands "$@"
 }
-(( $+functions[_1seed__sign__data_commands] )) ||
-_1seed__sign__data_commands() {
+(( $+functions[_1seed__subcmd__sign__subcmd__data_commands] )) ||
+_1seed__subcmd__sign__subcmd__data_commands() {
     local commands; commands=()
     _describe -t commands '1seed sign data commands' commands "$@"
 }
-(( $+functions[_1seed__sign__help_commands] )) ||
-_1seed__sign__help_commands() {
+(( $+functions[_1seed__subcmd__sign__subcmd__help_commands] )) ||
+_1seed__subcmd__sign__subcmd__help_commands() {
     local commands; commands=(
 'pub:Show signing public key' \
 'data:Sign data' \
@@ -932,38 +933,38 @@ _1seed__sign__help_commands() {
     )
     _describe -t commands '1seed sign help commands' commands "$@"
 }
-(( $+functions[_1seed__sign__help__data_commands] )) ||
-_1seed__sign__help__data_commands() {
+(( $+functions[_1seed__subcmd__sign__subcmd__help__subcmd__data_commands] )) ||
+_1seed__subcmd__sign__subcmd__help__subcmd__data_commands() {
     local commands; commands=()
     _describe -t commands '1seed sign help data commands' commands "$@"
 }
-(( $+functions[_1seed__sign__help__help_commands] )) ||
-_1seed__sign__help__help_commands() {
+(( $+functions[_1seed__subcmd__sign__subcmd__help__subcmd__help_commands] )) ||
+_1seed__subcmd__sign__subcmd__help__subcmd__help_commands() {
     local commands; commands=()
     _describe -t commands '1seed sign help help commands' commands "$@"
 }
-(( $+functions[_1seed__sign__help__pub_commands] )) ||
-_1seed__sign__help__pub_commands() {
+(( $+functions[_1seed__subcmd__sign__subcmd__help__subcmd__pub_commands] )) ||
+_1seed__subcmd__sign__subcmd__help__subcmd__pub_commands() {
     local commands; commands=()
     _describe -t commands '1seed sign help pub commands' commands "$@"
 }
-(( $+functions[_1seed__sign__help__verify_commands] )) ||
-_1seed__sign__help__verify_commands() {
+(( $+functions[_1seed__subcmd__sign__subcmd__help__subcmd__verify_commands] )) ||
+_1seed__subcmd__sign__subcmd__help__subcmd__verify_commands() {
     local commands; commands=()
     _describe -t commands '1seed sign help verify commands' commands "$@"
 }
-(( $+functions[_1seed__sign__pub_commands] )) ||
-_1seed__sign__pub_commands() {
+(( $+functions[_1seed__subcmd__sign__subcmd__pub_commands] )) ||
+_1seed__subcmd__sign__subcmd__pub_commands() {
     local commands; commands=()
     _describe -t commands '1seed sign pub commands' commands "$@"
 }
-(( $+functions[_1seed__sign__verify_commands] )) ||
-_1seed__sign__verify_commands() {
+(( $+functions[_1seed__subcmd__sign__subcmd__verify_commands] )) ||
+_1seed__subcmd__sign__subcmd__verify_commands() {
     local commands; commands=()
     _describe -t commands '1seed sign verify commands' commands "$@"
 }
-(( $+functions[_1seed__ssh_commands] )) ||
-_1seed__ssh_commands() {
+(( $+functions[_1seed__subcmd__ssh_commands] )) ||
+_1seed__subcmd__ssh_commands() {
     local commands; commands=(
 'pub:Show SSH public key' \
 'key:Show SSH private key' \
@@ -972,13 +973,13 @@ _1seed__ssh_commands() {
     )
     _describe -t commands '1seed ssh commands' commands "$@"
 }
-(( $+functions[_1seed__ssh__add_commands] )) ||
-_1seed__ssh__add_commands() {
+(( $+functions[_1seed__subcmd__ssh__subcmd__add_commands] )) ||
+_1seed__subcmd__ssh__subcmd__add_commands() {
     local commands; commands=()
     _describe -t commands '1seed ssh add commands' commands "$@"
 }
-(( $+functions[_1seed__ssh__help_commands] )) ||
-_1seed__ssh__help_commands() {
+(( $+functions[_1seed__subcmd__ssh__subcmd__help_commands] )) ||
+_1seed__subcmd__ssh__subcmd__help_commands() {
     local commands; commands=(
 'pub:Show SSH public key' \
 'key:Show SSH private key' \
@@ -987,38 +988,38 @@ _1seed__ssh__help_commands() {
     )
     _describe -t commands '1seed ssh help commands' commands "$@"
 }
-(( $+functions[_1seed__ssh__help__add_commands] )) ||
-_1seed__ssh__help__add_commands() {
+(( $+functions[_1seed__subcmd__ssh__subcmd__help__subcmd__add_commands] )) ||
+_1seed__subcmd__ssh__subcmd__help__subcmd__add_commands() {
     local commands; commands=()
     _describe -t commands '1seed ssh help add commands' commands "$@"
 }
-(( $+functions[_1seed__ssh__help__help_commands] )) ||
-_1seed__ssh__help__help_commands() {
+(( $+functions[_1seed__subcmd__ssh__subcmd__help__subcmd__help_commands] )) ||
+_1seed__subcmd__ssh__subcmd__help__subcmd__help_commands() {
     local commands; commands=()
     _describe -t commands '1seed ssh help help commands' commands "$@"
 }
-(( $+functions[_1seed__ssh__help__key_commands] )) ||
-_1seed__ssh__help__key_commands() {
+(( $+functions[_1seed__subcmd__ssh__subcmd__help__subcmd__key_commands] )) ||
+_1seed__subcmd__ssh__subcmd__help__subcmd__key_commands() {
     local commands; commands=()
     _describe -t commands '1seed ssh help key commands' commands "$@"
 }
-(( $+functions[_1seed__ssh__help__pub_commands] )) ||
-_1seed__ssh__help__pub_commands() {
+(( $+functions[_1seed__subcmd__ssh__subcmd__help__subcmd__pub_commands] )) ||
+_1seed__subcmd__ssh__subcmd__help__subcmd__pub_commands() {
     local commands; commands=()
     _describe -t commands '1seed ssh help pub commands' commands "$@"
 }
-(( $+functions[_1seed__ssh__key_commands] )) ||
-_1seed__ssh__key_commands() {
+(( $+functions[_1seed__subcmd__ssh__subcmd__key_commands] )) ||
+_1seed__subcmd__ssh__subcmd__key_commands() {
     local commands; commands=()
     _describe -t commands '1seed ssh key commands' commands "$@"
 }
-(( $+functions[_1seed__ssh__pub_commands] )) ||
-_1seed__ssh__pub_commands() {
+(( $+functions[_1seed__subcmd__ssh__subcmd__pub_commands] )) ||
+_1seed__subcmd__ssh__subcmd__pub_commands() {
     local commands; commands=()
     _describe -t commands '1seed ssh pub commands' commands "$@"
 }
-(( $+functions[_1seed__status_commands] )) ||
-_1seed__status_commands() {
+(( $+functions[_1seed__subcmd__status_commands] )) ||
+_1seed__subcmd__status_commands() {
     local commands; commands=()
     _describe -t commands '1seed status commands' commands "$@"
 }
