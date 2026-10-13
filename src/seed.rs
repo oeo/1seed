@@ -103,26 +103,32 @@ impl Seed {
             return Ok((Self::from_file(&path)?, SeedSource::EnvFile(path)));
         }
 
-        let use_file_only = std::env::var("SEED_NO_KEYRING").is_ok();
+        let keyring = if std::env::var("SEED_NO_KEYRING").is_ok() {
+            None
+        } else {
+            Self::keyring_secret().ok()
+        };
+        Self::load_stored(keyring, Self::default_file_path())
+    }
 
-        let default_file = Self::default_file_path();
-
-        if !use_file_only {
-            if let Ok(bytes) = Self::keyring_secret() {
-                let seed = Self::decode_storage(&bytes)?;
-                // The Linux keyring (kernel keyutils) does not survive a reboot:
-                // give seeds stored there by earlier versions a durable copy.
-                if cfg!(target_os = "linux") && !default_file.exists() {
-                    let data = Self::encode_master(&seed.master);
-                    if let Err(e) = write_secure(&default_file, &data) {
-                        eprintln!(
-                            "warning: seed exists only in the kernel keyring and could not be copied to {}: {e}",
-                            default_file.display()
-                        );
-                    }
+    fn load_stored(
+        keyring: Option<Vec<u8>>,
+        default_file: PathBuf,
+    ) -> Result<(Self, SeedSource), Box<dyn std::error::Error>> {
+        if let Some(bytes) = keyring {
+            let seed = Self::decode_storage(&bytes)?;
+            // The Linux keyring (kernel keyutils) does not survive a reboot:
+            // give seeds stored there by earlier versions a durable copy.
+            if cfg!(target_os = "linux") && !default_file.exists() {
+                let data = Self::encode_master(&seed.master);
+                if let Err(e) = write_seed_file(&default_file, &data) {
+                    eprintln!(
+                        "warning: seed exists only in the kernel keyring and could not be copied to {}: {e}",
+                        default_file.display()
+                    );
                 }
-                return Ok((seed, SeedSource::Keyring));
             }
+            return Ok((seed, SeedSource::Keyring));
         }
 
         if default_file.exists() {
@@ -144,18 +150,16 @@ impl Seed {
         // The Linux keyring (kernel keyutils) does not survive a reboot.
         let use_file_only = cfg!(target_os = "linux") || std::env::var("SEED_NO_KEYRING").is_ok();
 
-        if use_file_only {
-            write_secure(&Self::default_file_path(), &data)?;
+        if !use_file_only
+            && Entry::new("1seed", "master-seed")
+                .and_then(|e| e.set_secret(&data))
+                .is_ok()
+        {
             return Ok(());
         }
 
-        match Entry::new("1seed", "master-seed").and_then(|e| e.set_secret(&data)) {
-            Ok(()) => Ok(()),
-            Err(_) => {
-                write_secure(&Self::default_file_path(), &data)?;
-                Ok(())
-            }
-        }
+        write_seed_file(&Self::default_file_path(), &data)?;
+        Ok(())
     }
 
     pub fn remove() -> Result<(), Box<dyn std::error::Error>> {
@@ -172,6 +176,8 @@ impl Seed {
             std::fs::remove_file(&default_file)?;
             removed_any = true;
         }
+        // A write killed midway can leave the temp file holding the seed.
+        let _ = std::fs::remove_file(default_file.with_extension("tmp"));
 
         if removed_any {
             Ok(())
@@ -235,6 +241,24 @@ pub(crate) fn write_secure(path: &Path, data: &[u8]) -> std::io::Result<()> {
 #[cfg(not(unix))]
 pub(crate) fn write_secure(path: &Path, data: &[u8]) -> std::io::Result<()> {
     std::fs::write(path, data)
+}
+
+/// Writes the seed beside its target and renames it into place, so the
+/// target is either absent or complete.
+fn write_seed_file(path: &Path, data: &[u8]) -> std::io::Result<()> {
+    let tmp = path.with_extension("tmp");
+    let result = write_secure(&tmp, data)
+        .and_then(|()| {
+            std::fs::OpenOptions::new()
+                .write(true)
+                .open(&tmp)?
+                .sync_all()
+        })
+        .and_then(|()| std::fs::rename(&tmp, path));
+    if result.is_err() {
+        let _ = std::fs::remove_file(&tmp);
+    }
+    result
 }
 
 #[cfg(test)]
@@ -406,5 +430,66 @@ mod tests {
         assert_eq!(*via_blob.master, *via_scrypt.master);
         // and the headerless text is rejected, not read as its raw first 32 bytes
         assert!(Seed::from_bytes(pass.as_bytes()).is_err());
+    }
+
+    #[test]
+    fn write_seed_file_writes_exact_bytes_and_no_temp() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let path = dir.path().join(".1seed");
+        let blob = Seed::encode_master(&[0x5au8; 32]);
+
+        write_seed_file(&path, &blob).unwrap();
+
+        assert_eq!(std::fs::read(&path).unwrap(), blob);
+        assert!(!dir.path().join(".1seed.tmp").exists());
+    }
+
+    #[test]
+    fn write_seed_file_failure_leaves_no_target() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let path = dir.path().join(".1seed");
+        // the temp path is a directory, so the write cannot start
+        std::fs::create_dir(dir.path().join(".1seed.tmp")).unwrap();
+
+        assert!(write_seed_file(&path, &Seed::encode_master(&[0u8; 32])).is_err());
+        assert!(!path.exists());
+    }
+
+    #[test]
+    fn load_stored_corrupt_keyring_entry_errors() {
+        // must not fall through to a valid file
+        let dir = tempfile::TempDir::new().unwrap();
+        let path = dir.path().join(".1seed");
+        std::fs::write(&path, Seed::encode_master(&[1u8; 32])).unwrap();
+        let mut corrupt = Seed::encode_master(&[2u8; 32]);
+        corrupt.push(0);
+
+        assert!(Seed::load_stored(Some(corrupt), path).is_err());
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn load_stored_copies_keyring_seed_to_missing_file() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let path = dir.path().join(".1seed");
+        let blob = Seed::encode_master(&[3u8; 32]);
+
+        let (seed, source) = Seed::load_stored(Some(blob.clone()), path.clone()).unwrap();
+
+        assert_eq!(*seed.master, [3u8; 32]);
+        assert!(matches!(source, SeedSource::Keyring));
+        assert_eq!(std::fs::read(&path).unwrap(), blob);
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn load_stored_returns_keyring_seed_when_copy_fails() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let path = dir.path().join("missing").join(".1seed");
+        let blob = Seed::encode_master(&[4u8; 32]);
+
+        let (seed, _) = Seed::load_stored(Some(blob), path).unwrap();
+
+        assert_eq!(*seed.master, [4u8; 32]);
     }
 }

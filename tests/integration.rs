@@ -471,6 +471,31 @@ fn malformed_seed_files_rejected() {
     }
 }
 
+#[test]
+fn init_from_first_32_bytes_keeps_legacy_raw_key() {
+    let dir = tempfile::TempDir::new().unwrap();
+    // rejected as a seed file; older versions used its first 32 bytes as the key
+    let legacy = b"correct horse battery staple and more words\n";
+    let src = dir.path().join("first32");
+    std::fs::write(&src, &legacy[..32]).unwrap();
+
+    let out = init_cmd(dir.path())
+        .arg("init")
+        .arg("--from-file")
+        .arg(&src)
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+
+    let stored = std::fs::read(dir.path().join(".1seed")).unwrap();
+    assert_eq!(&stored[..5], b"1SED2");
+    assert_eq!(&stored[5..], &legacy[..32]);
+}
+
 #[cfg(target_os = "linux")]
 #[test]
 fn init_on_linux_stores_seed_file_without_keyring_override() {
