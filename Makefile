@@ -75,7 +75,8 @@ release:
 	cargo fmt -- --check
 	sed -i.bak 's/^version = ".*"/version = "$(VERSION)"/' Cargo.toml && rm Cargo.toml.bak
 	$(MAKE) lint test
-	git add Cargo.toml Cargo.lock
+	cargo run --locked --features generate --bin 1seed-generate -- .
+	git add Cargo.toml Cargo.lock man completions
 	git commit -m "Bump version to v$(VERSION)"
 	git tag -a v$(VERSION) -m "Release v$(VERSION)"
 	git push origin master

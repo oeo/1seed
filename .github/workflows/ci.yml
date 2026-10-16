@@ -57,6 +57,12 @@ jobs:
       - name: Test
         run: cargo test --locked
 
+      - name: Generated man page and completions match the CLI
+        if: runner.os == 'Linux'
+        run: |
+          cargo run --locked --features generate --bin 1seed-generate -- .
+          git diff --exit-code -- man completions
+
   audit:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -82,6 +88,8 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     permissions:
       contents: write
+      id-token: write
+      attestations: write
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -113,15 +121,16 @@ jobs:
             archive: zip
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Check tag matches Cargo version
         shell: bash
         run: grep -q "^version = \"${GITHUB_REF_NAME#v}\"" Cargo.toml
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
+          toolchain: stable
           targets: ${{ matrix.target }}
 
       - name: Install cross-compilation tools
@@ -147,6 +156,11 @@ jobs:
           Copy-Item target/${{ matrix.target }}/release/1seed${{ matrix.extension }} ${{ matrix.asset }}${{ matrix.extension }}
           Compress-Archive -Path ${{ matrix.asset }}${{ matrix.extension }} -DestinationPath ${{ matrix.asset }}.zip
           "$((Get-FileHash ${{ matrix.asset }}.zip -Algorithm SHA256).Hash.ToLower())  ${{ matrix.asset }}.zip`n" | Out-File -Encoding ascii -NoNewline ${{ matrix.asset }}.zip.sha256
+
+      - name: Attest build provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: ${{ matrix.asset }}.${{ matrix.archive }}
 
       - name: Upload
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
