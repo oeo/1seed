@@ -230,7 +230,7 @@ _1seed() {
 
     case "${cmd}" in
         1seed)
-            opts="-h -V --seed-file --realm --help --version age ssh sign derive init forget status help"
+            opts="-h -V --seed-file --ask-passphrase --realm --help --version age ssh sign derive init forget status help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0

@@ -1,5 +1,5 @@
 use crate::seed::Seed;
-use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
+use ed25519_dalek::{Signature, Signer, SigningKey, VerifyingKey};
 use std::io::Read;
 use std::path::Path;
 
@@ -47,7 +47,7 @@ pub fn verify(
 
     let data = read_input(input)?;
 
-    Ok(verifying_key.verify(&data, &signature).is_ok())
+    Ok(verifying_key.verify_strict(&data, &signature).is_ok())
 }
 
 fn read_input(path: Option<&Path>) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
@@ -129,6 +129,24 @@ mod tests {
         // use a different realm's public key
         let wrong_pubkey = derive_public(&seed, "other-realm");
         assert!(!verify(&wrong_pubkey, &sig, Some(&data_path)).unwrap());
+    }
+
+    #[test]
+    fn verify_rejects_small_order_key() {
+        // identity point as the key, R = identity and s = 0: valid for any
+        // message under non-strict verification
+        let mut identity = [0u8; 32];
+        identity[0] = 1;
+        let mut sig = [0u8; 64];
+        sig[..32].copy_from_slice(&identity);
+
+        use base64::Engine;
+        let pubkey = base64::engine::general_purpose::STANDARD.encode(identity);
+        let dir = tempfile::TempDir::new().unwrap();
+        let data_path = dir.path().join("data");
+        std::fs::write(&data_path, b"any message").unwrap();
+
+        assert!(!verify(&pubkey, &sig, Some(&data_path)).unwrap());
     }
 
     #[test]

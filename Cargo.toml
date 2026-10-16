@@ -39,7 +39,7 @@ bip39 = "2.0"
 clap = { version = "4.4", features = ["derive", "env"] }
 clap_mangen = { version = "0.2", optional = true }
 clap_complete = { version = "4.4", optional = true }
-rpassword = "7.3"
+rpassword = "=7.5.4"
 
 # Utilities
 base64 = "0.21"

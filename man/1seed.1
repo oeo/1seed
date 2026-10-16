@@ -4,12 +4,15 @@
 .SH NAME
 1seed \- Deterministic cryptographic keys from a single seed
 .SH SYNOPSIS
-\fB1seed\fR [\fB\-\-seed\-file\fR] [\fB\-\-realm\fR] [\fB\-h\fR|\fB\-\-help\fR] [\fB\-V\fR|\fB\-\-version\fR] <\fIsubcommands\fR>
+\fB1seed\fR [\fB\-\-seed\-file\fR] [\fB\-\-ask\-passphrase\fR] [\fB\-\-realm\fR] [\fB\-h\fR|\fB\-\-help\fR] [\fB\-V\fR|\fB\-\-version\fR] <\fIsubcommands\fR>
 .SH DESCRIPTION
 Deterministic cryptographic keys from a single seed
 .SH OPTIONS
 .TP
 \fB\-\-seed\-file\fR \fI<SEED_FILE>\fR
+
+.TP
+\fB\-\-ask\-passphrase\fR
 
 .TP
 \fB\-\-realm\fR \fI<REALM>\fR
@@ -58,6 +61,7 @@ EXAMPLES:
 
 FLAGS / ENVIRONMENT:
     \-\-seed\-file          Seed file path (takes precedence over SEED_FILE)
+    \-\-ask\-passphrase     Read the seed passphrase from the terminal; nothing is stored
     SEED_NO_KEYRING      Use ~/.1seed only (bypass keyring)
     \-\-realm              Default realm (takes precedence over SEED_REALM)
 

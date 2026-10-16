@@ -125,29 +125,14 @@ pub fn decrypt_with_file(
     input: Option<&Path>,
     output: Option<&Path>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let mut ciphertext = read_input(input)?;
-
     let key_content = std::fs::read_to_string(key_file)?;
-    let identity: age::x25519::Identity = key_content.trim().parse()?;
-
-    // handle armored input by de-armoring first
-    if ciphertext.starts_with(b"-----BEGIN AGE ENCRYPTED FILE-----") {
-        let armored_reader = age::armor::ArmoredReader::new(&ciphertext[..]);
-        ciphertext = std::io::Read::bytes(armored_reader).collect::<Result<Vec<u8>, _>>()?;
-    }
-
-    let decryptor = age::Decryptor::new(&ciphertext[..])?;
-
-    if decryptor.is_scrypt() {
-        return Err("encrypted with passphrase, use -p".into());
-    }
-
-    let mut plaintext = vec![];
-    let mut reader = decryptor.decrypt(std::iter::once(&identity as &dyn age::Identity))?;
-    reader.read_to_end(&mut plaintext)?;
-
-    write_output(output, &plaintext)?;
-    Ok(())
+    // age-keygen writes `#` comment lines before the key
+    let identity = key_content
+        .lines()
+        .map(str::trim)
+        .find(|line| !line.is_empty() && !line.starts_with('#'))
+        .ok_or("no identity found in key file")?;
+    decrypt(identity, input, output)
 }
 
 pub fn decrypt_passphrase(
@@ -459,7 +444,13 @@ mod tests {
         let pt_path = dir.path().join("pt");
 
         std::fs::write(&in_path, b"key file test").unwrap();
-        std::fs::write(&key_path, &identity_str).unwrap();
+        std::fs::write(
+            &key_path,
+            format!(
+                "# created: 2026-01-01T00:00:00Z\n# public key: {recipient_str}\n{identity_str}\n"
+            ),
+        )
+        .unwrap();
 
         encrypt(vec![recipient], false, Some(&in_path), Some(&ct_path)).unwrap();
         decrypt_with_file(&key_path, Some(&ct_path), Some(&pt_path)).unwrap();
