@@ -1,6 +1,6 @@
 # Print an optspec for argparse to handle cmd's options that are independent of any subcommand.
 function __fish_1seed_global_optspecs
-    string join \n seed-file= realm= h/help V/version
+    string join \n seed-file= ask-passphrase realm= h/help V/version
 end
 
 function __fish_1seed_needs_command
@@ -26,6 +26,7 @@ end
 
 complete -c 1seed -n "__fish_1seed_needs_command" -l seed-file -r -F
 complete -c 1seed -n "__fish_1seed_needs_command" -l realm -r
+complete -c 1seed -n "__fish_1seed_needs_command" -l ask-passphrase
 complete -c 1seed -n "__fish_1seed_needs_command" -s h -l help -d 'Print help'
 complete -c 1seed -n "__fish_1seed_needs_command" -s V -l version -d 'Print version'
 complete -c 1seed -n "__fish_1seed_needs_command" -f -a "age" -d 'Age encryption keys and operations'

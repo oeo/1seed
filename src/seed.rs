@@ -21,6 +21,7 @@ pub enum SeedSource {
     EnvFile(PathBuf),
     Keyring,
     DefaultFile(PathBuf),
+    Prompt,
 }
 
 impl Seed {
@@ -44,10 +45,16 @@ impl Seed {
         Ok(Self { master })
     }
 
+    /// A passphrase as typed or read from a file: surrounding whitespace is
+    /// not part of it.
+    pub fn from_typed_passphrase(passphrase: &str) -> Result<Self, Box<dyn std::error::Error>> {
+        Self::from_passphrase(passphrase.trim())
+    }
+
     pub fn master_from_passphrase(
         passphrase: &str,
     ) -> Result<[u8; 32], Box<dyn std::error::Error>> {
-        Ok(*Seed::from_passphrase(passphrase.trim())?.master)
+        Ok(*Seed::from_typed_passphrase(passphrase)?.master)
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
@@ -209,9 +216,7 @@ impl Seed {
     }
 
     pub fn exists() -> Result<bool, Box<dyn std::error::Error>> {
-        Ok(std::env::var("SEED_FILE").is_ok()
-            || Self::keyring_secret()?.is_some()
-            || Self::default_file_path().exists())
+        Ok(Self::keyring_secret()?.is_some() || Self::default_file_path().exists())
     }
 
     pub fn derive(&self, realm: &str, key_type: &str, length: usize) -> Zeroizing<Vec<u8>> {

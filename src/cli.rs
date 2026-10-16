@@ -21,6 +21,7 @@ use crate::{age, derive, password, sign, ssh};
 
 FLAGS / ENVIRONMENT:
     --seed-file          Seed file path (takes precedence over SEED_FILE)
+    --ask-passphrase     Read the seed passphrase from the terminal; nothing is stored
     SEED_NO_KEYRING      Use ~/.1seed only (bypass keyring)
     --realm              Default realm (takes precedence over SEED_REALM)
 
@@ -32,6 +33,9 @@ STORAGE:
 pub struct Cli {
     #[arg(long)]
     pub seed_file: Option<PathBuf>,
+
+    #[arg(long, conflicts_with = "seed_file")]
+    pub ask_passphrase: bool,
 
     #[arg(long, global = true, env = "SEED_REALM")]
     pub realm: Option<String>,
@@ -244,6 +248,10 @@ impl Cli {
 }
 
 fn get_seed(cli: &Cli) -> Result<(Seed, SeedSource), Box<dyn std::error::Error>> {
+    if cli.ask_passphrase {
+        let pass = prompt_new_passphrase()?;
+        return Ok((Seed::from_typed_passphrase(&pass)?, SeedSource::Prompt));
+    }
     if let Some(ref path) = cli.seed_file {
         return Ok((Seed::from_file(path)?, SeedSource::EnvFile(path.clone())));
     }
@@ -254,6 +262,26 @@ fn prompt_passphrase(prompt: &str) -> Result<String, Box<dyn std::error::Error>>
     eprint!("{prompt}: ");
     std::io::stderr().flush()?;
     Ok(rpassword::read_password()?)
+}
+
+/// A mistyped passphrase derives a valid but different seed, so ask twice.
+fn prompt_new_passphrase() -> Result<String, Box<dyn std::error::Error>> {
+    let pass = prompt_passphrase("passphrase")?;
+    if pass != prompt_passphrase("confirm")? {
+        return Err("passphrases do not match".into());
+    }
+    Ok(pass)
+}
+
+/// init and forget act only on the stored seed (keyring or ~/.1seed).
+fn reject_seed_overrides(cli: &Cli, command: &str) -> Result<(), Box<dyn std::error::Error>> {
+    if cli.seed_file.is_some() || cli.ask_passphrase || std::env::var_os("SEED_FILE").is_some() {
+        return Err(format!(
+            "{command} acts on the stored seed only; drop --seed-file and --ask-passphrase, and unset SEED_FILE"
+        )
+        .into());
+    }
+    Ok(())
 }
 
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
@@ -439,6 +467,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 eprintln!("  Same master seed = same mnemonic = same wallets");
                 eprintln!("  Compromise of master seed = loss of funds");
                 eprintln!("  Consider: dedicated realm, hardware wallet");
+                eprintln!("  realm: {realm}");
 
                 let (seed, _) = get_seed(&cli)?;
                 let mnemonic = derive::mnemonic(&seed, &realm, *words)?;
@@ -482,8 +511,9 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Init {
             passphrase,
             generate,
-            from_file,
+            ref from_file,
         } => {
+            reject_seed_overrides(&cli, "init")?;
             if Seed::exists()? {
                 return Err("seed already exists, run '1seed forget --confirm' first".into());
             }
@@ -510,16 +540,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                     return Err("seed file must be 32 raw bytes or a UTF-8 text passphrase".into());
                 }
             } else if passphrase {
-                eprint!("passphrase: ");
-                std::io::stderr().flush()?;
-                let pass = rpassword::read_password()?;
-                eprint!("confirm: ");
-                std::io::stderr().flush()?;
-                let confirm = rpassword::read_password()?;
-                if pass != confirm {
-                    return Err("passphrases do not match".into());
-                }
-                Seed::master_from_passphrase(&pass)?
+                Seed::master_from_passphrase(&prompt_new_passphrase()?)?
             } else {
                 return Err("must specify --passphrase, --generate, or --from-file".into());
             };
@@ -542,6 +563,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         Commands::Forget { confirm } => {
+            reject_seed_overrides(&cli, "forget")?;
             if !confirm {
                 return Err("use --confirm to remove seed".into());
             }
@@ -552,21 +574,16 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
 
         Commands::Status => {
             println!("1seed {}", env!("CARGO_PKG_VERSION"));
-            let realm_info = if std::env::var("SEED_REALM").is_ok() {
-                format!("{} (SEED_REALM)", realm)
-            } else if cli.realm.is_some() {
-                format!("{} (--realm)", realm)
-            } else {
-                realm.clone()
-            };
-            println!("realm: {}", realm_info);
+            println!("realm: {realm}");
 
             match get_seed(&cli) {
                 Ok((seed, source)) => {
                     let source_desc = match source {
-                        SeedSource::EnvFile(ref path) => format!("SEED_FILE: {}", path.display()),
+                        SeedSource::EnvFile(ref path) | SeedSource::DefaultFile(ref path) => {
+                            path.display().to_string()
+                        }
                         SeedSource::Keyring => "keyring".to_string(),
-                        SeedSource::DefaultFile(ref path) => format!("{}", path.display()),
+                        SeedSource::Prompt => "passphrase (not stored)".to_string(),
                     };
                     println!("seed: {}", source_desc);
                     println!("keys:");

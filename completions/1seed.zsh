@@ -17,6 +17,7 @@ _1seed() {
     _arguments "${_arguments_options[@]}" : \
 '--seed-file=[]:SEED_FILE:_files' \
 '--realm=[]:REALM:_default' \
+'(--seed-file)--ask-passphrase[]' \
 '-h[Print help]' \
 '--help[Print help]' \
 '-V[Print version]' \

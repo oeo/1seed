@@ -1,3 +1,4 @@
+use sha2::Digest;
 use std::io::Write;
 use std::process::{Command, Stdio};
 use tempfile::TempDir;
@@ -416,6 +417,47 @@ fn init_generate_stores_magic_seed() {
 }
 
 #[test]
+fn init_and_forget_refuse_seed_overrides() {
+    let cases: [(&[&str], bool); 6] = [
+        (&["init", "--generate"], true),
+        (&["--seed-file", "x", "init", "--generate"], false),
+        (&["--ask-passphrase", "init", "--generate"], false),
+        (&["forget", "--confirm"], true),
+        (&["--seed-file", "x", "forget", "--confirm"], false),
+        (&["--ask-passphrase", "forget", "--confirm"], false),
+    ];
+    for (args, via_env) in cases {
+        let dir = tempfile::TempDir::new().unwrap();
+        let mut cmd = init_cmd(dir.path());
+        if via_env {
+            cmd.env("SEED_FILE", dir.path().join("missing"));
+        }
+        let out = cmd.args(args).output().unwrap();
+        assert!(!out.status.success(), "{args:?}");
+        assert!(
+            String::from_utf8_lossy(&out.stderr).contains("acts on the stored seed only"),
+            "{args:?}: {}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        assert_eq!(
+            std::fs::read_dir(dir.path()).unwrap().count(),
+            0,
+            "{args:?}"
+        );
+    }
+}
+
+#[test]
+fn ask_passphrase_conflicts_with_seed_file() {
+    let out = Command::new(env!("CARGO_BIN_EXE_1seed"))
+        .args(["--seed-file", "x", "--ask-passphrase", "derive", "mnemonic"])
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&out.stderr).contains("cannot be used with"));
+}
+
+#[test]
 fn init_from_magic_file_rejected() {
     let dir = tempfile::TempDir::new().unwrap();
     let src = dir.path().join("seed.bin");
@@ -594,4 +636,130 @@ fn derive_integer_full_range() {
         .trim()
         .parse::<i64>()
         .unwrap();
+}
+
+fn stdout_of(cmd: &mut Command) -> String {
+    let out = cmd.output().unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    String::from_utf8(out.stdout).unwrap()
+}
+
+/// Exact outputs captured from v0.8.2. Any change that alters derived keys,
+/// encodings, or the KDF fails here; such a change must be a new derivation
+/// version, never an edit to these values.
+#[test]
+fn known_answer_vectors() {
+    let ctx = TestContext::new();
+    let dir = ctx._dir.path();
+    let data = dir.join("data.txt");
+    std::fs::write(&data, "known answer data\n").unwrap();
+    let data = data.to_str().unwrap();
+
+    let cases: &[(&[&str], &str)] = &[
+        (&["age", "pub"], "age1uw84uq6ek9n5kk6mej7rj9qsx6r26wmzjluxdpx6pj6ed74nsvcsmcydvt\n"),
+        (&["age", "key"], "AGE-SECRET-KEY-1FMZVF5WNLYAHSTM928Y3H5VC439Y2ZFFMFXZQFAUJUHWCQF35PDQLPL26M\n"),
+        (&["ssh", "pub"], "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAII9bp34wTxHzKITMKURXzOBbIeE0RVd1E35rqiBtYMYZ 1seed:default\n"),
+        (
+            &["ssh", "key"],
+            "-----BEGIN OPENSSH PRIVATE KEY-----\n\
+             b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW\n\
+             QyNTUxOQAAACCPW6d+ME8R8yiEzClEV8zgWyHhNEVXdRN+a6ogbWDGGQAAAIiYY5eEmGOX\n\
+             hAAAAAtzc2gtZWQyNTUxOQAAACCPW6d+ME8R8yiEzClEV8zgWyHhNEVXdRN+a6ogbWDGGQ\n\
+             AAAEBjeQ1LIC1zBJhjVT9bu+5QOUx/u2V2VWEuwOu0ahWTyo9bp34wTxHzKITMKURXzOBb\n\
+             IeE0RVd1E35rqiBtYMYZAAAAAAECAwQF\n\
+             -----END OPENSSH PRIVATE KEY-----\n",
+        ),
+        (&["sign", "pub"], "uKuH78uGCreO6QWmkoCn8pWACr/p94UTorD0039du/A=\n"),
+        (&["sign", "data", data], "UUxc1RJUnjZkxxIyKn42ujz0bzl6K6Dg+QxPX4GLfRjuX0EJYanYkoTVpkpmRo2h/FUhbtPWU71mL6k037+EBQ==\n"),
+        (&["derive", "password", "example.com"], "Er9CWbRVGRZzM!87"),
+        (&["derive", "password", "example.com", "-l", "4", "--no-symbols"], "4rHc"),
+        (&["derive", "password", "example.com", "--symbols", "+-", "-n", "2"], "2DAAahXetu2Uj8K+"),
+        (&["derive", "mnemonic", "-w", "12"], "initial wedding nephew differ swing affair float off device quality album type\n"),
+        (&["derive", "mnemonic", "-w", "15"], "initial wedding nephew differ swing affair float off device quality album turtle razor among general\n"),
+        (&["derive", "mnemonic", "-w", "18"], "initial wedding nephew differ swing affair float off device quality album turtle razor among glad puzzle extend nerve\n"),
+        (&["derive", "mnemonic", "-w", "21"], "initial wedding nephew differ swing affair float off device quality album turtle razor among glad puzzle extend news tube cost mobile\n"),
+        (&["derive", "mnemonic", "-w", "24"], "initial wedding nephew differ swing affair float off device quality album turtle razor among glad puzzle extend news tube cost limb bunker thought code\n"),
+        (&["derive", "int", "dice", "--min", "1", "--max", "6"], "6\n"),
+        (&["derive", "int", "full", "--min=-9223372036854775808", "--max=9223372036854775807"], "8320348908091761961\n"),
+        (&["derive", "uuid", "test"], "06a40a98-4a36-444f-bc6d-af65d587dbb0\n"),
+        (&["derive", "raw", "key", "-l", "64"], "4df42929a080f94850e8695e4198a8207047c2c975dd243abb5ac045402c33aa48c0549166ffa33e67a149df1def4abf03cba132290b54098707d7733a9a4c39\n"),
+    ];
+    for (args, expected) in cases {
+        assert_eq!(&stdout_of(ctx.cmd().args(*args)), expected, "{args:?}");
+    }
+
+    // the realm defaults to "default" when neither --realm nor SEED_REALM is given
+    let mut no_realm = Command::new(env!("CARGO_BIN_EXE_1seed"));
+    no_realm
+        .env("SEED_FILE", &ctx.seed_file)
+        .env_remove("SEED_REALM")
+        .args(["age", "pub"]);
+    assert_eq!(stdout_of(&mut no_realm), cases[0].1);
+
+    // headerless binary seeds of 32+ bytes are read as a raw master
+    let legacy = dir.join("legacy");
+    let mut raw = vec![0xffu8];
+    raw.extend(1u8..40);
+    std::fs::write(&legacy, raw).unwrap();
+    let mut legacy_cmd = Command::new(env!("CARGO_BIN_EXE_1seed"));
+    legacy_cmd
+        .env("SEED_FILE", &legacy)
+        .args(["--realm", "default", "age", "pub"]);
+    assert_eq!(
+        stdout_of(&mut legacy_cmd),
+        "age1en8ye6klhvv9s6mm7gewfkrt6pgnt3dxqyt0g7nhy26z360u7qmqsrpyqk\n"
+    );
+
+    let wordlist = bip39::Language::English.word_list().join("\n");
+    assert_eq!(
+        hex::encode(sha2::Sha256::digest(wordlist.as_bytes())),
+        "187db04a869dd9bc7be80d21a86497d692c0db6abd3aa8cb6be5d618ff757fae"
+    );
+}
+
+// The README's offline test vector; keep the two in sync.
+const README_PASSPHRASE: &str = "tidy oxygen ripple cobalt swerve banjo";
+const README_MNEMONIC: &str = "blush neck grab brass orchard real veteran afraid box empty tuna decade smooth tree other hidden broken increase address seek fox purchase possible roof\n";
+
+/// Pins scrypt at production cost and both passphrase trims: the one a
+/// headerless seed file takes and the one init and --ask-passphrase take.
+#[test]
+fn known_answer_passphrase() {
+    let dir = tempfile::TempDir::new().unwrap();
+    let mnemonic = |seed: &std::path::Path| {
+        stdout_of(
+            Command::new(env!("CARGO_BIN_EXE_1seed"))
+                .env("SEED_FILE", seed)
+                .args(["--realm", "btc", "derive", "mnemonic"]),
+        )
+    };
+
+    let headerless = dir.path().join("pass.txt");
+    std::fs::write(&headerless, format!("  {README_PASSPHRASE}  ")).unwrap();
+    assert_eq!(mnemonic(&headerless), README_MNEMONIC);
+
+    // not exactly 32 bytes, which init would read as a raw key
+    let typed = dir.path().join("typed.txt");
+    std::fs::write(&typed, format!("  {README_PASSPHRASE}  \n")).unwrap();
+    let out = init_cmd(dir.path())
+        .args(["init", "--from-file"])
+        .arg(&typed)
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+
+    let stored = dir.path().join(".1seed");
+    assert_eq!(
+        hex::encode(std::fs::read(&stored).unwrap()),
+        "315345443203dc2b23f29e7430a51e147d88a4b3c029d68f0bf6a96b8a2b24871b87586bca"
+    );
+    assert_eq!(mnemonic(&stored), README_MNEMONIC);
 }
