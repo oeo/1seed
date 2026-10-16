@@ -89,6 +89,12 @@ impl Seed {
             master.copy_from_slice(&bytes[MAGIC.len()..]);
             return Ok(Self { master });
         }
+        // A binary age file would otherwise load as its constant first 32 bytes.
+        if bytes.starts_with(b"age-encryption.org/")
+            || bytes.starts_with(b"-----BEGIN AGE ENCRYPTED FILE-----")
+        {
+            return Err("seed is an age-encrypted file; decrypt it first".into());
+        }
         Self::from_bytes(bytes)
     }
 
@@ -418,6 +424,20 @@ mod tests {
         assert!(Seed::decode_storage(b"correct horse battery staple and more words\n").is_err());
         // exactly 32 bytes: 31 characters plus the newline
         assert!(Seed::decode_storage(b"thirty-one character passphrase\n").is_err());
+    }
+
+    #[test]
+    fn decode_storage_age_file_errors() {
+        // binary age: header text, then a non-UTF-8 body; was read as its first 32 bytes
+        let mut binary = b"age-encryption.org/v1\n-> X25519 abc\ndef\n--- ghi\n".to_vec();
+        binary.extend_from_slice(&[0xff; 32]);
+        let armored =
+            b"-----BEGIN AGE ENCRYPTED FILE-----\nYWdl\n-----END AGE ENCRYPTED FILE-----\n";
+
+        for bytes in [&binary[..], &armored[..]] {
+            let err = Seed::decode_storage(bytes).err().unwrap();
+            assert!(err.to_string().contains("age-encrypted"), "{err}");
+        }
     }
 
     #[test]

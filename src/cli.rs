@@ -313,12 +313,12 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                     let pass = prompt_passphrase("passphrase")?;
                     age::encrypt_passphrase(&pass, *armor, file.as_deref(), output.as_deref())?;
                 } else {
-                    let (seed, _) = get_seed(&cli)?;
                     let use_self = *self_ || (recipients.is_empty() && recipient_files.is_empty());
 
                     let mut all_recipients: Vec<Box<dyn ::age::Recipient + Send>> = vec![];
 
                     if use_self {
+                        let (seed, _) = get_seed(&cli)?;
                         let recipient_str = age::derive_recipient(&seed, &realm);
                         all_recipients.push(age::parse_recipient(&recipient_str)?);
                     }

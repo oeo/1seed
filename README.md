@@ -157,6 +157,7 @@ export SEED_REALM=personal
 
 ## Version History
 
+- **Unreleased**: a seed file that is an age-encrypted file is rejected with an error; a binary one was previously read as its first 32 bytes, which are the same for every age file of the same recipient type, giving keys anyone could derive. `age encrypt -R`/`-F` without `-s` no longer reads the seed
 - **v0.9.0**: `--ask-passphrase` derives from a typed passphrase without storing anything; known-answer tests pin every derivation; `init` and `forget` refuse `--seed-file`, `--ask-passphrase`, and `SEED_FILE` (previously `forget` ignored them and removed the stored seed); `sign verify` rejects small-order keys; `age decrypt -k` reads key files written by age-keygen; `derive mnemonic` prints the realm on stderr
 - **v0.8.2**: `sign verify @file` accepts the base64 file that `sign data -o` writes
 - **v0.8.1**: Seed file written atomically; keyring failures are reported and no longer treated as a missing seed
