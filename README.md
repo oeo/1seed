@@ -157,7 +157,7 @@ export SEED_REALM=personal
 
 ## Version History
 
-- **Unreleased**: `--ask-passphrase` derives from a typed passphrase without storing anything; known-answer tests pin every derivation; `init` and `forget` refuse `--seed-file`, `--ask-passphrase`, and `SEED_FILE` (previously `forget` ignored them and removed the stored seed); `sign verify` rejects small-order keys; `age decrypt -k` reads key files written by age-keygen; `derive mnemonic` prints the realm on stderr
+- **v0.9.0**: `--ask-passphrase` derives from a typed passphrase without storing anything; known-answer tests pin every derivation; `init` and `forget` refuse `--seed-file`, `--ask-passphrase`, and `SEED_FILE` (previously `forget` ignored them and removed the stored seed); `sign verify` rejects small-order keys; `age decrypt -k` reads key files written by age-keygen; `derive mnemonic` prints the realm on stderr
 - **v0.8.2**: `sign verify @file` accepts the base64 file that `sign data -o` writes
 - **v0.8.1**: Seed file written atomically; keyring failures are reported and no longer treated as a missing seed
 - **v0.8.0**: Added `--seed-file`, upgraded age to 0.12, refreshed audited dependencies; Linux stores the seed in `~/.1seed`; malformed seeds are rejected
