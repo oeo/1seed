@@ -554,6 +554,94 @@ fn malformed_seed_files_rejected() {
 }
 
 #[test]
+fn age_encrypted_seed_file_rejected() {
+    let ctx = TestContext::new();
+    let encrypted = ctx._dir.path().join("seed.age");
+
+    let out = ctx
+        .cmd()
+        .args(["age", "encrypt", "-o"])
+        .arg(&encrypted)
+        .arg(&ctx.seed_file)
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+
+    let out = Command::new(env!("CARGO_BIN_EXE_1seed"))
+        .env("SEED_FILE", &encrypted)
+        .args(["--realm", "default", "age", "pub"])
+        .output()
+        .unwrap();
+    assert!(!out.status.success(), "age file loaded as a seed");
+    assert!(String::from_utf8_lossy(&out.stderr).contains("age-encrypted"));
+}
+
+#[test]
+fn encrypt_to_recipient_needs_no_seed() {
+    let ctx = TestContext::new();
+    let recipient = stdout_of(ctx.cmd().args(["age", "pub"]));
+    let home = tempfile::TempDir::new().unwrap();
+
+    let mut enc = init_cmd(home.path())
+        .env_remove("SEED_FILE")
+        .args(["age", "encrypt", "-R", recipient.trim()])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    enc.stdin.as_mut().unwrap().write_all(b"hello").unwrap();
+    let out = enc.wait_with_output().unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+
+    let mut dec = ctx
+        .cmd()
+        .args(["age", "decrypt"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+    dec.stdin.as_mut().unwrap().write_all(&out.stdout).unwrap();
+    let dec_out = dec.wait_with_output().unwrap();
+    assert!(dec_out.status.success());
+    assert_eq!(dec_out.stdout, b"hello");
+}
+
+#[test]
+fn init_from_armored_age_file_rejected() {
+    let ctx = TestContext::new();
+    let home = tempfile::TempDir::new().unwrap();
+    let armored = home.path().join("seed.age");
+
+    let out = ctx
+        .cmd()
+        .args(["age", "encrypt", "-a", "-o"])
+        .arg(&armored)
+        .arg(&ctx.seed_file)
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+
+    let out = init_cmd(home.path())
+        .env_remove("SEED_FILE")
+        .args(["init", "--from-file"])
+        .arg(&armored)
+        .output()
+        .unwrap();
+    assert!(!out.status.success(), "armored age file imported as a seed");
+    assert!(String::from_utf8_lossy(&out.stderr).contains("age-encrypted"));
+    assert!(!home.path().join(".1seed").exists());
+}
+
+#[test]
 fn init_from_first_32_bytes_keeps_legacy_raw_key() {
     let dir = tempfile::TempDir::new().unwrap();
     // rejected as a seed file; older versions used its first 32 bytes as the key
