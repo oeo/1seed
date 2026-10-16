@@ -530,6 +530,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                             .into(),
                     );
                 }
+                crate::seed::reject_age_file(&bytes)?;
                 if bytes.len() == 32 {
                     let mut m = [0u8; 32];
                     m.copy_from_slice(&bytes);

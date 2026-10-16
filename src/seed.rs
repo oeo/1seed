@@ -89,12 +89,7 @@ impl Seed {
             master.copy_from_slice(&bytes[MAGIC.len()..]);
             return Ok(Self { master });
         }
-        // A binary age file would otherwise load as its constant first 32 bytes.
-        if bytes.starts_with(b"age-encryption.org/")
-            || bytes.starts_with(b"-----BEGIN AGE ENCRYPTED FILE-----")
-        {
-            return Err("seed is an age-encrypted file; decrypt it first".into());
-        }
+        reject_age_file(bytes)?;
         Self::from_bytes(bytes)
     }
 
@@ -268,6 +263,22 @@ pub(crate) fn write_secure(path: &Path, data: &[u8]) -> std::io::Result<()> {
     std::fs::write(path, data)
 }
 
+/// Read as a seed, a binary age file (any header version) becomes its constant
+/// first 32 bytes and an armored one a passphrase made of its ciphertext.
+/// Text that merely starts like an age header stays a passphrase. Armor after
+/// a BOM or whitespace, which editors add, is refused too.
+pub(crate) fn reject_age_file(bytes: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
+    let binary = bytes.starts_with(b"age-encryption.org/") && std::str::from_utf8(bytes).is_err();
+    let text = bytes
+        .strip_prefix(b"\xEF\xBB\xBF")
+        .unwrap_or(bytes)
+        .trim_ascii_start();
+    if binary || text.starts_with(b"-----BEGIN AGE ENCRYPTED FILE-----") {
+        return Err("seed is an age-encrypted file; decrypt it first".into());
+    }
+    Ok(())
+}
+
 /// Separates "no entry" from a keyring that could not be asked.
 fn keyring_found<T>(result: keyring::Result<T>) -> keyring::Result<Option<T>> {
     match result {
@@ -429,15 +440,31 @@ mod tests {
     #[test]
     fn decode_storage_age_file_errors() {
         // binary age: header text, then a non-UTF-8 body; was read as its first 32 bytes
-        let mut binary = b"age-encryption.org/v1\n-> X25519 abc\ndef\n--- ghi\n".to_vec();
-        binary.extend_from_slice(&[0xff; 32]);
+        let binary = |header: &[u8]| {
+            let mut file = header.to_vec();
+            file.extend_from_slice(b"-> X25519 abc\ndef\n--- ghi\n");
+            file.extend_from_slice(&[0xff; 32]);
+            file
+        };
+        let v1 = binary(b"age-encryption.org/v1\n");
+        let future = binary(b"age-encryption.org/v2\n");
+        let crlf = binary(b"age-encryption.org/v1\r\n");
         let armored =
             b"-----BEGIN AGE ENCRYPTED FILE-----\nYWdl\n-----END AGE ENCRYPTED FILE-----\n";
+        let mut padded = b"\xEF\xBB\xBF \r\n".to_vec();
+        padded.extend_from_slice(armored);
 
-        for bytes in [&binary[..], &armored[..]] {
+        for bytes in [&v1[..], &future[..], &crlf[..], &armored[..], &padded[..]] {
             let err = Seed::decode_storage(bytes).err().unwrap();
             assert!(err.to_string().contains("age-encrypted"), "{err}");
         }
+    }
+
+    #[test]
+    fn decode_storage_passphrase_naming_age_still_loads() {
+        let seed = Seed::decode_storage(b"age-encryption.org/my-secret").unwrap();
+        let expected = Seed::from_passphrase("age-encryption.org/my-secret").unwrap();
+        assert_eq!(*seed.master, *expected.master);
     }
 
     #[test]
