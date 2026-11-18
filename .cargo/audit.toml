@@ -2,4 +2,12 @@
 ignore = [
   # Optional ssh-key feature is inactive; `cargo tree --invert rsa` is empty.
   "RUSTSEC-2023-0071",
+  # crypto-bigint 0.5.5 via age 0.12.1 -> p256 0.13 (and hpke 0.12) -> elliptic-curve 0.13.
+  # No fix is reachable: the patch is 0.7.6 only, and age 0.12.1 (latest) requires p256 ^0.13.
+  # Not reachable from 1seed: age uses P-256 only to encrypt to tagged recipients
+  # (age1tag / age1tagpq) and has no tagged identity, so decryption never runs it;
+  # 1seed parses only x25519 recipients/identities and scrypt passphrases (src/age.rs).
+  # Void if 1seed ever accepts tagged or plugin recipients, or age gains a tagged identity.
+  # Remove when `cargo tree --locked -i crypto-bigint` no longer shows a version < 0.7.6.
+  "RUSTSEC-2026-0387",
 ]
