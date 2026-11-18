@@ -384,6 +384,7 @@ fn init_cmd(dir: &std::path::Path) -> Command {
     let mut cmd = Command::new(env!("CARGO_BIN_EXE_1seed"));
     cmd.env("SEED_NO_KEYRING", "1");
     cmd.env("HOME", dir);
+    cmd.env_remove("SEED_FILE");
     cmd
 }
 
@@ -587,7 +588,6 @@ fn encrypt_to_recipient_needs_no_seed() {
     let home = tempfile::TempDir::new().unwrap();
 
     let mut enc = init_cmd(home.path())
-        .env_remove("SEED_FILE")
         .args(["age", "encrypt", "-R", recipient.trim()])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -631,7 +631,6 @@ fn init_from_armored_age_file_rejected() {
     assert!(out.status.success());
 
     let out = init_cmd(home.path())
-        .env_remove("SEED_FILE")
         .args(["init", "--from-file"])
         .arg(&armored)
         .output()
