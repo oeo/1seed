@@ -147,6 +147,22 @@ Realms namespace all derived keys. Same seed, different realm = different keys.
 export SEED_REALM=personal
 ```
 
+## Signing Git Commits
+
+Git 2.34 and later can sign commits with an SSH key, so the derived SSH key works without a separate signing key:
+
+```bash
+1seed ssh pub > ~/.ssh/1seed.pub
+git config --global gpg.format ssh
+git config --global user.signingkey ~/.ssh/1seed.pub
+git config --global commit.gpgsign true
+1seed ssh add
+```
+
+Git signs through the SSH agent, which holds the private key only in memory, so run `1seed ssh add` again whenever the agent restarts, such as after a logout or reboot. Use the same realm for `ssh pub` and `ssh add`.
+
+For GitHub to mark the commits as verified, add the contents of `~/.ssh/1seed.pub` to your account as a signing key, even if the same key is already there for authentication, and commit with an email address that is verified on that account.
+
 ## Security Model
 
 **Single Point of Failure**: The seed is the "Master Key". If it leaks, everything derived from it is compromised. 1seed trades N secrets for one well-protected secret.
